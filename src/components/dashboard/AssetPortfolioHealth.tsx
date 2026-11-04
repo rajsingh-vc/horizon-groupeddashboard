@@ -37,7 +37,7 @@ import {
 type ChartType = 'Donut' | 'Pie' | 'Vertical Bar' | 'Horizontal Bar' | 'Line' | 'Area' | 'Radar';
 
 const STATUS_CHART_TYPES: ChartType[] = ['Donut', 'Pie', 'Vertical Bar', 'Horizontal Bar'];
-const CATEGORY_CHART_TYPES: ChartType[] = ['Horizontal Bar', 'Vertical Bar', 'Donut', 'Radar', 'Line', 'Area'];
+const CATEGORY_CHART_TYPES: ChartType[] = ['Pie', 'Donut', 'Vertical Bar', 'Horizontal Bar', 'Radar', 'Line', 'Area'];
 
 export function AssetPortfolioHealth() {
   const { filters, openSlideOver } = useDashboard();
@@ -49,23 +49,16 @@ export function AssetPortfolioHealth() {
 
   const summary = useMemo(() => {
     const raw = (rawData?.summary || {}) as Record<string, any>;
-    const total = Number(raw.total ?? 516);
-    const operational = Number(raw.operational ?? 505);
-    const maintenance = Number(raw.maintenance ?? 11);
+    const total = Number(raw.total ?? 0);
+    const operational = Number(raw.operational ?? 0);
+    const maintenance = Number(raw.maintenance ?? 0);
     const critical = Number(raw.critical ?? 0);
-    const health_percentage = Number(raw.health_percentage ?? 97.9);
+    const health_percentage = Number(raw.health_percentage ?? (total > 0 ? (operational / total) * 100 : 0));
     return { total, operational, maintenance, critical, health_percentage };
   }, [rawData]);
 
   const categories = useMemo(() => {
-    const list = rawData?.category_breakdown || [
-      { category: 'Uncategorized', total: 338, operational: 327, health_percentage: 96.7 },
-      { category: 'Electrical', total: 116, operational: 116, health_percentage: 100 },
-      { category: 'Pump', total: 40, operational: 40, health_percentage: 100 },
-      { category: 'Fire', total: 13, operational: 13, health_percentage: 100 },
-      { category: 'Plumbing', total: 6, operational: 6, health_percentage: 100 },
-      { category: 'CCTV', total: 3, operational: 3, health_percentage: 100 },
-    ];
+    const list = rawData?.category_breakdown || [];
 
     return list.map((c) => ({
       name: c.category || 'Equipment',
@@ -532,7 +525,7 @@ export function AssetPortfolioHealth() {
             {categoryChartType === 'Horizontal Bar' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '220px' }}>
                 {displayedCategories.map((c) => (
-                  <div key={c.name} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div key={c.name} onClick={() => handleDrill(undefined, c.name)} title={`Click to drill down ${c.name} assets`} style={{ display: 'flex', flexDirection: 'column', gap: '4px', cursor: 'pointer' }} className="hover:opacity-80 transition-opacity">
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
                       <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{c.name}</span>
                       <span style={{ fontWeight: 700, color: '#00E676' }}>

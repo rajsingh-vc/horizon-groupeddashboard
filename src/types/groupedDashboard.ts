@@ -398,6 +398,7 @@ export interface PPMDrillRecord {
   asset_id: number;
   asset_name?: string;
   asset_number?: string;
+  checklist?: string;
   category: string;
   location: string;
   status: string;

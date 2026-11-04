@@ -41,9 +41,9 @@ export function ExecutiveKPIStrip() {
   const kpiCards = useMemo(() => {
     const raw = (rawKpiData || {}) as Record<string, any>;
     const assetH = raw.asset_health?.summary;
-    const slaComp = raw.sla_compliance?.summary;
+    const slaComp = raw.ticket_sla_health?.summary || raw.sla_compliance?.summary;
     const ppmComp = raw.ppm_compliance?.summary;
-    const amcComp = raw.compliance_score?.summary;
+    const amcComp = raw.vendor_sla?.summary || raw.compliance_score?.summary;
     const visitors = raw.visitors_today?.summary;
     const avgRes = raw.avg_resolution_time?.summary;
 
@@ -52,51 +52,51 @@ export function ExecutiveKPIStrip() {
         id: 'serviceRequestTat',
         key: 'kpi_ticket_sla' as const,
         title: 'Service Request SLA & TAT',
-        value: slaComp?.percentage != null ? slaComp.percentage : 100,
+        value: slaComp?.percentage != null ? Number(slaComp.percentage) : 100,
         unit: '%',
         decimals: 0,
-        trend: slaComp?.vs_last_period != null ? Number(slaComp.vs_last_period) : 1.5,
+        trend: slaComp?.vs_last_period != null ? Number(slaComp.vs_last_period) : 0,
         trendType: (slaComp?.vs_last_period ?? 0) >= 0 ? ('up' as const) : ('down' as const),
-        periodTrendText: `${(slaComp?.vs_last_period ?? 1.5) >= 0 ? '+' : ''}${slaComp?.vs_last_period ?? 1.5}% vs ${periodLabel}`,
+        periodTrendText: `${(slaComp?.vs_last_period ?? 0) >= 0 ? '+' : ''}${slaComp?.vs_last_period ?? 0}% vs ${periodLabel}`,
         targetTrendText: `${(slaComp?.percentage ?? 100) >= 95 ? `${((slaComp?.percentage ?? 100) - 95).toFixed(1)}% above 95% target` : 'Below SLA Target'}`,
         accentColor: '#FF5B22',
         icon: Ticket,
         keywords: ['ticket', 'service', 'request', 'tat', 'sla', 'helpdesk', 'resolution'],
         submetrics: [
-          { label: 'Total Requests', value: slaComp?.total ?? 321 },
-          { label: 'Within TAT', value: slaComp?.compliant ?? 321, color: 'success' },
-          { label: 'Outside TAT', value: (slaComp?.total ?? 321) - (slaComp?.compliant ?? 321), color: 'danger' },
+          { label: 'Total Requests', value: slaComp?.total ?? 0 },
+          { label: 'Within TAT', value: (slaComp?.within_sla ?? slaComp?.compliant) ?? 0, color: 'success' },
+          { label: 'Outside TAT', value: (slaComp?.breached ?? Math.max(0, (slaComp?.total ?? 0) - ((slaComp?.within_sla ?? slaComp?.compliant) ?? 0))), color: 'danger' },
         ],
-        sparkline: [92, 94, 96, 95, 98, 100],
-        inspectionSummary: `${slaComp?.compliant ?? 321} of ${slaComp?.total ?? 321} requests resolved within SLA (< 4.0 hrs)`,
+        sparkline: [92, 94, 96, 95, 98, Number(slaComp?.percentage ?? 100)],
+        inspectionSummary: `${(slaComp?.within_sla ?? slaComp?.compliant) ?? 0} of ${slaComp?.total ?? 0} requests resolved within SLA (< 4.0 hrs)`,
       },
       {
         id: 'ppmCompliance',
         key: 'kpi_ppm' as const,
         title: 'PPM Compliance',
-        value: ppmComp?.percentage != null ? ppmComp.percentage : 93.8,
+        value: ppmComp?.percentage != null ? Number(ppmComp.percentage) : 0,
         unit: '%',
         decimals: 1,
-        trend: ppmComp?.vs_last_period != null ? Number(ppmComp.vs_last_period) : 50,
+        trend: ppmComp?.vs_last_period != null ? Number(ppmComp.vs_last_period) : 0,
         trendType: (ppmComp?.vs_last_period ?? 0) >= 0 ? ('up' as const) : ('down' as const),
-        periodTrendText: `${(ppmComp?.vs_last_period ?? 50) >= 0 ? '+' : ''}${ppmComp?.vs_last_period ?? 50}% vs ${periodLabel}`,
-        targetTrendText: `${(ppmComp?.percentage ?? 93.8) >= 90 ? `${((ppmComp?.percentage ?? 93.8) - 90).toFixed(1)}% above 90% target` : 'Below PPM Target'}`,
+        periodTrendText: `${(ppmComp?.vs_last_period ?? 0) >= 0 ? '+' : ''}${ppmComp?.vs_last_period ?? 0}% vs ${periodLabel}`,
+        targetTrendText: `${(ppmComp?.percentage ?? 0) >= 90 ? `${((ppmComp?.percentage ?? 0) - 90).toFixed(1)}% above 90% target` : 'Below PPM Target'}`,
         accentColor: '#00C853',
         icon: ClipboardCheck,
         keywords: ['ppm', 'preventive', 'maintenance', 'scheduled', 'checklist', 'overdue'],
         submetrics: [
-          { label: 'Total Scheduled', value: ppmComp?.total ?? 16 },
-          { label: 'Completed', value: ppmComp?.compliant ?? 15, color: 'success' },
-          { label: 'Overdue', value: Math.max(0, (ppmComp?.total ?? 16) - (ppmComp?.compliant ?? 15)), color: 'danger' },
+          { label: 'Total Scheduled', value: (ppmComp?.total_scheduled ?? ppmComp?.total) ?? 0 },
+          { label: 'Completed', value: (ppmComp?.completed ?? ppmComp?.compliant) ?? 0, color: 'success' },
+          { label: 'Overdue', value: (ppmComp?.overdue ?? Math.max(0, ((ppmComp?.total_scheduled ?? ppmComp?.total) ?? 0) - ((ppmComp?.completed ?? ppmComp?.compliant) ?? 0))), color: 'danger' },
         ],
-        sparkline: [78, 82, 85, 88, 91, 93.8],
-        inspectionSummary: `${ppmComp?.compliant ?? 15} tasks completed on-time across scheduled PM maintenance orders`,
+        sparkline: [78, 82, 85, 88, 91, Number(ppmComp?.percentage ?? 0)],
+        inspectionSummary: `${(ppmComp?.completed ?? ppmComp?.compliant) ?? 0} tasks completed on-time across scheduled PM maintenance orders`,
       },
       {
         id: 'amcCompliance',
         key: 'kpi_vendor_sla' as const,
         title: 'AMC Compliance',
-        value: amcComp?.percentage != null ? amcComp.percentage : 100,
+        value: amcComp?.percentage != null ? Number(amcComp.percentage) : 0,
         unit: '%',
         decimals: 0,
         trend: amcComp?.vs_last_period != null ? Number(amcComp.vs_last_period) : 0,
@@ -107,39 +107,39 @@ export function ExecutiveKPIStrip() {
         icon: ShieldCheck,
         keywords: ['amc', 'contract', 'annual', 'vendor', 'warranty', 'compliance'],
         submetrics: [
-          { label: 'Total AMC', value: amcComp?.total ?? 12 },
-          { label: 'Compliant', value: amcComp?.compliant ?? 12, color: 'success' },
+          { label: 'Total AMC', value: amcComp?.total ?? 0 },
+          { label: 'Compliant', value: amcComp?.compliant ?? 0, color: 'success' },
         ],
-        sparkline: [100, 100, 100, 100, 100, 100],
-        inspectionSummary: `${amcComp?.total ?? 12} active annual maintenance service partner contracts verified`,
+        sparkline: [100, 100, 100, 100, 100, Number(amcComp?.percentage ?? 0)],
+        inspectionSummary: `${amcComp?.total ?? 0} active annual maintenance service partner contracts verified`,
       },
       {
         id: 'assetHealth',
         key: 'kpi_asset' as const,
         title: 'Asset Portfolio & Health',
-        value: assetH?.percentage != null ? assetH.percentage : 97.9,
+        value: assetH?.percentage != null ? Number(assetH.percentage) : 0,
         unit: '%',
         decimals: 1,
-        trend: assetH?.vs_last_period != null ? Number(assetH.vs_last_period) : 0.8,
+        trend: assetH?.vs_last_period != null ? Number(assetH.vs_last_period) : 0,
         trendType: (assetH?.vs_last_period ?? 0) >= 0 ? ('up' as const) : ('down' as const),
-        periodTrendText: `${(assetH?.vs_last_period ?? 0.8) >= 0 ? '+' : ''}${assetH?.vs_last_period ?? 0.8}% vs ${periodLabel}`,
-        targetTrendText: `${(assetH?.percentage ?? 97.9) >= 95 ? `${((assetH?.percentage ?? 97.9) - 95).toFixed(1)}% above 95% target` : 'Below 95% target'}`,
+        periodTrendText: `${(assetH?.vs_last_period ?? 0) >= 0 ? '+' : ''}${assetH?.vs_last_period ?? 0}% vs ${periodLabel}`,
+        targetTrendText: `${(assetH?.percentage ?? 0) >= 95 ? `${((assetH?.percentage ?? 0) - 95).toFixed(1)}% above 95% target` : 'Below 95% target'}`,
         accentColor: '#00E676',
         icon: Cpu,
         keywords: ['asset', 'portfolio', 'health', 'equipment', 'operational', 'breakdown'],
         submetrics: [
-          { label: 'Total Assets', value: assetH?.total ?? 516 },
-          { label: 'Operational', value: assetH?.compliant ?? 505, color: 'success' },
-          { label: 'Breakdown', value: Math.max(0, (assetH?.total ?? 516) - (assetH?.compliant ?? 505)), color: 'warning' },
+          { label: 'Total Assets', value: assetH?.total ?? 0 },
+          { label: 'Operational', value: (assetH?.operational ?? assetH?.compliant) ?? 0, color: 'success' },
+          { label: 'Breakdown', value: (assetH?.maintenance ?? Math.max(0, (assetH?.total ?? 0) - ((assetH?.operational ?? assetH?.compliant) ?? 0))), color: 'warning' },
         ],
-        sparkline: [95, 96, 96.5, 97, 97.5, 97.9],
-        inspectionSummary: `${assetH?.compliant ?? 505} operational units online across Grade-A Horizon Parks`,
+        sparkline: [95, 96, 96.5, 97, 97.5, Number(assetH?.percentage ?? 0)],
+        inspectionSummary: `${(assetH?.operational ?? assetH?.compliant) ?? 0} operational units online across Grade-A Horizon Parks`,
       },
       {
         id: 'totalVisitors',
         key: 'kpi_visitors' as const,
         title: 'Total Visitors',
-        value: visitors?.currently_inside ?? 907,
+        value: visitors?.currently_inside ?? 0,
         unit: '',
         decimals: 0,
         trend: visitors?.vs_yesterday != null ? Number(visitors.vs_yesterday) : 0,
@@ -150,18 +150,18 @@ export function ExecutiveKPIStrip() {
         icon: Users,
         keywords: ['visitor', 'visitors', 'security', 'gate', 'footfall', 'occupancy'],
         submetrics: [
-          { label: 'Checked In', value: visitors?.checked_in ?? 10151, color: 'success' },
-          { label: 'Checked Out', value: visitors?.checked_out ?? 9244, color: 'neutral' },
-          { label: 'Currently Inside', value: visitors?.currently_inside ?? 907, color: 'primary' },
+          { label: 'Checked In', value: visitors?.checked_in ?? 0, color: 'success' },
+          { label: 'Checked Out', value: visitors?.checked_out ?? 0, color: 'neutral' },
+          { label: 'Currently Inside', value: visitors?.currently_inside ?? 0, color: 'primary' },
         ],
-        sparkline: [650, 720, 810, 890, 850, 907],
-        inspectionSummary: `${(visitors?.currently_inside ?? 907).toLocaleString()} visitors currently on-site through monitored security gates`,
+        sparkline: [650, 720, 810, 890, 850, Number(visitors?.currently_inside ?? 0)],
+        inspectionSummary: `${(visitors?.currently_inside ?? 0).toLocaleString()} visitors currently on-site through monitored security gates`,
       },
       {
         id: 'avgResolutionTime',
         key: 'kpi_avg_resolution' as const,
         title: 'Average Resolution Time',
-        value: avgRes?.hours != null ? avgRes.hours : 0.8,
+        value: avgRes?.hours != null ? Number(avgRes.hours) : 0,
         unit: 'hrs',
         decimals: 1,
         trend: avgRes?.vs_last_period != null ? Number(avgRes.vs_last_period) : 0,
@@ -173,10 +173,10 @@ export function ExecutiveKPIStrip() {
         keywords: ['resolution', 'time', 'average', 'tat', 'speed', 'duration'],
         submetrics: [
           { label: 'Target TAT', value: '< 4.0 hrs' },
-          { label: 'Avg Closure', value: `${avgRes?.hours ?? 0.8} hrs`, color: 'success' },
+          { label: 'Avg Closure', value: `${avgRes?.hours ?? 0} hrs`, color: 'success' },
         ],
-        sparkline: [1.8, 1.5, 1.2, 1.0, 0.9, 0.8],
-        inspectionSummary: `Average turnaround time ${avgRes?.hours ?? 0.8} hrs well within established 4.0-hour SLA window`,
+        sparkline: [1.8, 1.5, 1.2, 1.0, 0.9, Number(avgRes?.hours ?? 0)],
+        inspectionSummary: `Average turnaround time ${avgRes?.hours ?? 0} hrs well within established 4.0-hour SLA window`,
       },
     ];
 
@@ -207,14 +207,75 @@ export function ExecutiveKPIStrip() {
 
   if (isPending && !rawKpiData) {
     return (
-      <section style={{ marginBottom: '28px' }}>
-        <div className="kpi-grid">
+      <section style={{ marginBottom: '28px' }} className="animate-fade-in">
+        {/* Centered wave dots status indicator */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            padding: '16px 0 20px 0',
+          }}
+        >
+          <div className="wave-dots-container">
+            <span className="wave-dot" style={{ width: '12px', height: '12px' }} />
+            <span className="wave-dot" style={{ width: '12px', height: '12px' }} />
+            <span className="wave-dot" style={{ width: '12px', height: '12px' }} />
+          </div>
+          <span
+            style={{
+              fontSize: '0.8125rem',
+              color: 'var(--text-muted)',
+              fontWeight: 500,
+              letterSpacing: '0.04em',
+            }}
+          >
+            Loading executive telemetry...
+          </span>
+        </div>
+
+        {/* Centered KPI Cards Grid with Wave Animations */}
+        <div
+          className="kpi-grid"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            alignItems: 'stretch',
+            gap: '14px',
+            width: '100%',
+          }}
+        >
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
               className="glass-card skeleton"
-              style={{ minHeight: '180px', flex: '1 1 240px', maxWidth: '380px' }}
-            />
+              style={{
+                minHeight: '190px',
+                flex: '1 1 260px',
+                maxWidth: '390px',
+                borderRadius: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                padding: '24px',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+              }}
+            >
+              <div className="wave-dots-container">
+                <span className="wave-dot" style={{ width: '8px', height: '8px', animationDelay: `${i * 0.12}s` }} />
+                <span className="wave-dot" style={{ width: '8px', height: '8px', animationDelay: `${i * 0.12 + 0.2}s` }} />
+                <span className="wave-dot" style={{ width: '8px', height: '8px', animationDelay: `${i * 0.12 + 0.4}s` }} />
+              </div>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                Loading metric...
+              </span>
+            </div>
           ))}
         </div>
       </section>

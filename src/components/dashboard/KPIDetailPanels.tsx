@@ -127,10 +127,13 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 function LoadingState() {
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}</div>
-      <Skeleton className="h-48" />
-      <Skeleton className="h-32" />
+    <div className="flex flex-col items-center justify-center py-20 gap-3">
+      <div className="wave-dots-container">
+        <span className="wave-dot" style={{ width: '10px', height: '10px' }} />
+        <span className="wave-dot" style={{ width: '10px', height: '10px' }} />
+        <span className="wave-dot" style={{ width: '10px', height: '10px' }} />
+      </div>
+      <span className="text-xs text-muted-foreground font-medium">Loading details...</span>
     </div>
   );
 }
@@ -973,6 +976,7 @@ export function VendorSLAPanel() {
   const { filters } = useDashboard();
   const { data, isPending, dataUpdatedAt, refetch, isFetching } = useDashboardKPIs(filters);
   const [drillVendor, setDrillVendor] = useState<Record<string, unknown> | null>(null);
+  const [vendorChartType, setVendorChartType] = useState<'Pie' | 'Vertical Bar' | 'Horizontal Bar'>('Pie');
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
   const vendorData = data?.vendor_sla;
@@ -1046,17 +1050,96 @@ export function VendorSLAPanel() {
             </div>
             <StatCard label="Compliance %" value={`${vendorData!.summary.percentage}%`} color={vendorData!.summary.percentage >= 85 ? 'text-healthy' : 'text-critical'} />
 
-            <SectionTitle>Vendor SLA Status</SectionTitle>
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <SectionTitle>Vendor SLA Status</SectionTitle>
+              <div className="flex items-center gap-0.5 bg-muted/80 p-0.5 rounded-lg border border-border">
+                {(['Pie', 'Vertical Bar', 'Horizontal Bar'] as const).map((type) => {
+                  const isSelected = vendorChartType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setVendorChartType(type)}
+                      className={cn(
+                        'px-2.5 py-1 text-2xs font-bold rounded-md transition-all cursor-pointer',
+                        isSelected
+                          ? 'bg-background text-foreground shadow-xs border border-border'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                      )}
+                    >
+                      {type}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" outerRadius={75} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              <div style={{ height: '200px', width: '100%', position: 'relative' }}>
+                {vendorChartType === 'Pie' ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Tooltip content={<CustomTooltip />} />
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={78}
+                        paddingAngle={3}
+                      >
+                        {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : vendorChartType === 'Vertical Bar' ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={pieData} margin={{ top: 10, right: 15, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" fontSize={11} />
+                      <YAxis fontSize={11} allowDecimals={false} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="value" name="Vendors" radius={[5, 5, 0, 0]} barSize={36}>
+                        {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={pieData} layout="vertical" margin={{ top: 10, right: 25, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" fontSize={11} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" fontSize={11} width={95} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="value" name="Vendors" radius={[0, 5, 5, 0]} barSize={22}>
+                        {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+
+                {vendorChartType === 'Pie' && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
+                      {vendorData!.summary.percentage}%
+                    </div>
+                    <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-muted)', marginTop: '3px' }}>
+                      Compliance
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">No vendor data</p>
             )}
@@ -1175,9 +1258,109 @@ function DrillDownVendorSLA({ vendor, onBack }: { vendor: Record<string, unknown
 
 // ─── VISITORS TODAY PANEL ────────────────────────────────────────────────────
 
+const VISITOR_CATEGORY_PALETTE = [
+  '#00C853', // Emerald green
+  '#00B0FF', // Sky blue
+  '#FF9100', // Amber/Orange
+  '#7C4DFF', // Purple
+  '#FF5252', // Red
+  '#00E5FF', // Cyan
+  '#FFD600', // Yellow
+  '#FF4081', // Pink
+  '#64DD17', // Lime
+  '#536DFE', // Indigo
+  '#FF6E40', // Deep orange
+  '#78909C', // Slate gray
+];
+
+const VisitorChartTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const isLight =
+      typeof document !== 'undefined' &&
+      (document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.documentElement.classList.contains('light'));
+    return (
+      <div
+        style={{
+          backgroundColor: isLight ? '#FFFFFF' : '#0F172A',
+          border: isLight ? '1px solid #CBD5E1' : '1px solid rgba(255, 255, 255, 0.25)',
+          borderRadius: '8px',
+          padding: '8px 12px',
+          boxShadow: isLight
+            ? '0 10px 24px -2px rgba(15, 23, 42, 0.15), 0 4px 8px -2px rgba(15, 23, 42, 0.08)'
+            : '0 12px 28px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 0, 0, 0.5)',
+          color: isLight ? '#0F172A' : '#FFFFFF',
+          fontSize: '12px',
+          pointerEvents: 'none',
+          zIndex: 9999,
+        }}
+      >
+        {label && (
+          <div
+            style={{
+              color: isLight ? '#64748B' : '#94A3B8',
+              fontSize: '11px',
+              fontWeight: 600,
+              marginBottom: '4px',
+            }}
+          >
+            {label}
+          </div>
+        )}
+        {payload.map((entry: any, index: number) => {
+          const color = entry.color || entry.fill || entry.payload?.fill || '#00C853';
+          const name = entry.name || entry.dataKey || entry.payload?.category || label;
+          const value = entry.value;
+          const pct = entry.payload?.percentage;
+          return (
+            <div
+              key={index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: isLight ? '#0F172A' : '#FFFFFF',
+                marginTop: index > 0 ? '4px' : '0',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: color,
+                    display: 'inline-block',
+                  }}
+                />
+                <span style={{ color: isLight ? '#334155' : '#CBD5E1' }}>{name}</span>
+              </div>
+              <span
+                style={{
+                  fontWeight: 800,
+                  color: isLight ? '#0F172A' : '#FFFFFF',
+                  fontFamily: 'monospace',
+                }}
+              >
+                {value} {pct != null ? `(${pct}%)` : ''}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
+};
+
 export function VisitorsTodayPanel() {
   const { filters, openSlideOver } = useDashboard();
   const { data, isPending, dataUpdatedAt, refetch, isFetching } = useVisitorsDetail(filters);
+  const [visitorChartType, setVisitorChartType] = useState<'Donut' | 'Horizontal Bar' | 'Vertical Bar'>('Donut');
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
@@ -1193,7 +1376,20 @@ export function VisitorsTodayPanel() {
   };
 
   const categoryData = useMemo(() => data?.period.by_category ?? [], [data]);
-  const pieData = useMemo(() => categoryData.map((c, i) => ({ ...c, fill: PIE_PALETTE[i % PIE_PALETTE.length] })), [categoryData]);
+  const totalVisitors = useMemo(
+    () => data?.period?.total || categoryData.reduce((sum, c) => sum + (c.count || 0), 0),
+    [data?.period?.total, categoryData]
+  );
+  const pieData = useMemo(() => {
+    return categoryData.map((c, i) => {
+      const pct = totalVisitors > 0 ? ((c.count / totalVisitors) * 100) : 0;
+      return {
+        ...c,
+        percentage: Number(pct.toFixed(1)),
+        fill: VISITOR_CATEGORY_PALETTE[i % VISITOR_CATEGORY_PALETTE.length],
+      };
+    });
+  }, [categoryData, totalVisitors]);
 
   if (isPending) return <LoadingState />;
   if (!data) return <p className="text-sm text-muted-foreground">Failed to load visitors data</p>;
@@ -1276,52 +1472,215 @@ export function VisitorsTodayPanel() {
         </TabsContent>
 
         <TabsContent value="category" className="space-y-4">
-          <SectionTitle>Visitors by Category</SectionTitle>
+          <div className="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-border">
+            <SectionTitle>Visitors by Category</SectionTitle>
+
+            {/* View Switcher Pills */}
+            <div className="flex items-center gap-0.5 bg-muted/80 p-0.5 rounded-lg border border-border">
+              {(['Donut', 'Horizontal Bar', 'Vertical Bar'] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setVisitorChartType(type)}
+                  className={cn(
+                    'px-2.5 py-1 text-2xs font-bold rounded-md transition-all cursor-pointer',
+                    visitorChartType === type
+                      ? 'bg-background text-foreground shadow-xs border border-border'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                  )}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {categoryData.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" outerRadius={75} dataKey="count" nameKey="category" label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                    {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom"
-                    align="center"
-                    wrapperStyle={{
-                      paddingTop: '20px',
-                      lineHeight: '24px',
-                    }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="border rounded-lg overflow-hidden">
+              {/* Dynamic Chart Container */}
+              <div
+                style={{
+                  height: visitorChartType === 'Horizontal Bar' ? `${Math.max(220, categoryData.length * 28)}px` : '220px',
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {visitorChartType === 'Donut' ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Tooltip content={<VisitorChartTooltip />} />
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={85}
+                        paddingAngle={2}
+                        dataKey="count"
+                        nameKey="category"
+                        cursor="pointer"
+                        onClick={(d) => openSlideOver('drill_visitors', { category: d?.category })}
+                      >
+                        {pieData.map((entry, i) => (
+                          <Cell
+                            key={`visitor-cell-${i}`}
+                            fill={entry.fill}
+                            stroke={hoveredCategory === entry.category ? 'var(--text-primary)' : 'transparent'}
+                            strokeWidth={2}
+                            opacity={hoveredCategory && hoveredCategory !== entry.category ? 0.45 : 1}
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : visitorChartType === 'Horizontal Bar' ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-color)" />
+                      <XAxis type="number" fontSize={10} stroke="var(--text-muted)" allowDecimals={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="category"
+                        fontSize={10}
+                        stroke="var(--text-muted)"
+                        width={95}
+                        tickFormatter={(val) => (val?.length > 13 ? `${val.substring(0, 12)}…` : val)}
+                      />
+                      <Tooltip content={<VisitorChartTooltip />} />
+                      <Bar
+                        dataKey="count"
+                        name="Visitors"
+                        radius={[0, 4, 4, 0]}
+                        barSize={16}
+                        cursor="pointer"
+                        onClick={(d: any) => openSlideOver('drill_visitors', { category: d?.category })}
+                      >
+                        {pieData.map((entry, i) => (
+                          <Cell key={`vhbar-${i}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={pieData.slice(0, 8)} margin={{ top: 10, right: 15, left: -20, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                      <XAxis
+                        dataKey="category"
+                        fontSize={9}
+                        stroke="var(--text-muted)"
+                        angle={-25}
+                        textAnchor="end"
+                        interval={0}
+                        tickFormatter={(val) => (val?.length > 10 ? `${val.substring(0, 9)}…` : val)}
+                      />
+                      <YAxis fontSize={10} stroke="var(--text-muted)" allowDecimals={false} />
+                      <Tooltip content={<VisitorChartTooltip />} />
+                      <Bar
+                        dataKey="count"
+                        name="Visitors"
+                        radius={[4, 4, 0, 0]}
+                        barSize={22}
+                        cursor="pointer"
+                        onClick={(d: any) => openSlideOver('drill_visitors', { category: d?.category })}
+                      >
+                        {pieData.slice(0, 8).map((entry, i) => (
+                          <Cell key={`vvbar-${i}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+
+                {/* Central Donut Total Overlay */}
+                {visitorChartType === 'Donut' && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
+                      {totalVisitors.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-muted)', marginTop: '3px' }}>
+                      Total Visits
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* High-Contrast Interactive Category Grid / Legend */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 p-2 rounded-lg bg-card border border-border shadow-xs">
+                {pieData.map((entry) => (
+                  <div
+                    key={entry.category}
+                    onMouseEnter={() => setHoveredCategory(entry.category)}
+                    onMouseLeave={() => setHoveredCategory(null)}
+                    onClick={() => openSlideOver('drill_visitors', { category: entry.category })}
+                    className={cn(
+                      'flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-md border text-xs cursor-pointer transition-all',
+                      hoveredCategory === entry.category
+                        ? 'bg-muted border-primary shadow-xs'
+                        : 'bg-card/70 border-border/70 hover:bg-muted/40'
+                    )}
+                    title={`Click to inspect ${entry.category} visits`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        style={{ backgroundColor: entry.fill }}
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                      />
+                      <span className="truncate font-semibold text-foreground text-2xs">{entry.category}</span>
+                    </div>
+                    <span className="font-mono font-bold text-foreground text-2xs shrink-0">
+                      {entry.count} ({entry.percentage}%)
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Data Table */}
+              <div className="border border-border rounded-lg overflow-hidden shadow-xs">
                 <table className="w-full text-xs">
-                  <thead className="text-white" style={{ background: 'linear-gradient(90deg, #8f53a1 0%, #f47920 100%)', }}>
+                  <thead className="bg-muted text-foreground border-b border-border">
                     <tr>
-                      <th className="text-left p-2 font-medium">Category</th>
-                      <th className="text-right p-2 font-medium">Count</th>
-                      <th className="text-right p-2 font-medium">%</th>
-                      <th className="text-right p-2 font-medium w-8"></th>
+                      <th className="text-left p-2.5 font-extrabold tracking-wide">Category</th>
+                      <th className="text-right p-2.5 font-extrabold tracking-wide">Count</th>
+                      <th className="text-right p-2.5 font-extrabold tracking-wide">%</th>
+                      <th className="text-right p-2.5 font-extrabold tracking-wide w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {categoryData.map((row, i) => (
+                    {pieData.map((row, i) => (
                       <tr
                         key={i}
-                        className="border-t hover:bg-muted/20 cursor-pointer"
+                        className="border-t border-border hover:bg-muted/40 cursor-pointer transition-colors"
                         onClick={() => openSlideOver('drill_visitors', { category: row.category })}
                       >
-                        <td className="p-2">{row.category}</td>
-                        <td className="p-2 text-right font-medium">{row.count}</td>
-                        <td className="p-2 text-right text-muted-foreground">
-                          {data!.period.total > 0 ? ((row.count / data!.period.total) * 100).toFixed(1) : 0}%
+                        <td className="p-2.5 font-semibold text-foreground flex items-center gap-2">
+                          <span style={{ backgroundColor: row.fill }} className="w-2 h-2 rounded-full shrink-0" />
+                          <span>{row.category}</span>
                         </td>
-                        <td className="p-2 text-right"><ChevronRight className="h-3 w-3 text-muted-foreground inline" /></td>
+                        <td className="p-2.5 text-right font-bold text-foreground font-mono">{row.count.toLocaleString()}</td>
+                        <td className="p-2.5 text-right font-semibold text-muted-foreground font-mono">
+                          {row.percentage}%
+                        </td>
+                        <td className="p-2.5 text-right">
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground inline" />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="text-2xs text-muted-foreground mt-2">Click a category to see visit details (check-in, host, approved, purpose).</p>
+              <p className="text-2xs text-muted-foreground mt-1">
+                Tip: Click any slice, card, or table row to drill down into full visitor logs (check-in, host, purpose, approvals).
+              </p>
             </>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">No category data for this period</p>

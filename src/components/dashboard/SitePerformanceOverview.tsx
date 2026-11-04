@@ -16,7 +16,7 @@ import {
 
 type MetricMode = 'health' | 'tat' | 'ppm' | 'workforce';
 type ViewMode = 'table' | 'chart' | 'heatmap';
-type ChartType = 'Horizontal Bar' | 'Vertical Bar' | 'Line' | 'Area' | 'Radar';
+type ChartType = 'Horizontal Bar' | 'Vertical Bar' | 'Pie' | 'Donut' | 'Line' | 'Area' | 'Radar';
 
 const METRIC_TABS: { id: MetricMode; label: string; color: string }[] = [
   { id: 'health', label: 'Overall Health', color: '#00C853' },
@@ -54,10 +54,10 @@ export function SitePerformanceOverview() {
       const id = s.id || idx + 1;
       const name = s.name || `Park #${id}`;
       const group = s.group || '—';
-      const health = Number(s.health_score ?? 97.9);
-      const tat = Number(s.sla_percentage ?? 100);
-      const ppm = Number(s.ppm_percentage ?? 93.8);
-      const workforce = Number(s.workforce_percentage ?? 15.2);
+      const health = Number(s.health_score ?? 0);
+      const tat = Number(s.sla_percentage ?? 0);
+      const ppm = Number(s.ppm_percentage ?? 0);
+      const workforce = Number(s.workforce_percentage ?? 0);
       const assets = Number(s.total_assets ?? 0);
       const tickets = Number((s.open_tickets || 0) + (s.pending_tickets || 0));
       const closed = Number(s.open_tickets ? Math.max(0, tickets - s.open_tickets) : 0);
@@ -130,7 +130,7 @@ export function SitePerformanceOverview() {
   };
 
   const handleSiteClick = (site: typeof sites[0]) => {
-    openSlideOver('site', {
+    openSlideOver('drill_site', {
       siteId: site.id,
       id: site.id,
       name: site.name,

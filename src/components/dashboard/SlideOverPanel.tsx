@@ -15,7 +15,7 @@ import {
   VisitorsTodayPanel,
   AvgResolutionPanel,
 } from './KPIDetailPanels';
-import { AssetDrillPanel, WorkforceDrillPanel, PPMDrillPanel, VisitorDrillPanel } from './DrillDownPanels';
+import { AssetDrillPanel, WorkforceDrillPanel, PPMDrillPanel, VisitorDrillPanel, TicketDrillPanel } from './DrillDownPanels';
 import { SiteDrillPanel } from './SiteDrillPanel';
 
 function SiteDetailPanel({ site }: { site: Site }) {
@@ -411,25 +411,26 @@ function AlertDetailPanel({ alert }: { alert: Alert }) {
 }
 
 const KPI_TITLES: Record<string, string> = {
-  kpi_ticket_sla: 'Ticket SLA Health',
-  kpi_ppm: 'PPM Compliance',
-  kpi_asset: 'Asset Health',
+  kpi_ticket_sla: 'Service Desk & SLA Intelligence',
+  kpi_ppm: 'Planned Preventive Maintenance & Soft Services',
+  kpi_asset: 'Asset Portfolio & Health',
   kpi_workforce: 'Workforce Availability',
   kpi_vendor_sla: 'Vendor SLA',
   kpi_visitors: 'Visitors Today',
   kpi_avg_resolution: 'Avg Resolution Time',
-  drill_asset: 'Asset Drill-down',
-  drill_workforce: 'Workforce Drill-down',
-  drill_site: 'Site Details',
-  drill_ppm: 'PPM Drill-down',
+  drill_asset: 'Asset Portfolio & Health',
+  drill_workforce: 'Workforce Tracking',
+  drill_site: 'Site Performance at a Glance',
+  drill_ppm: 'Planned Preventive Maintenance & Soft Services',
+  drill_ticket: 'Service Desk & SLA Intelligence',
   drill_visitors: 'Visitor Details',
 };
 
 const KPI_PANEL_COMPONENTS: Record<string, React.ComponentType> = {
-  kpi_ticket_sla: TicketSLAPanel,
-  kpi_ppm: PPMCompliancePanel,
-  kpi_asset: AssetHealthPanel,
-  kpi_workforce: WorkforcePanel,
+  kpi_ticket_sla: TicketDrillPanel,
+  kpi_ppm: PPMDrillPanel,
+  kpi_asset: AssetDrillPanel,
+  kpi_workforce: WorkforceDrillPanel,
   kpi_vendor_sla: VendorSLAPanel,
   kpi_visitors: VisitorsTodayPanel,
   kpi_avg_resolution: AvgResolutionPanel,
@@ -437,6 +438,7 @@ const KPI_PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   drill_workforce: WorkforceDrillPanel,
   drill_site: SiteDrillPanel,
   drill_ppm: PPMDrillPanel,
+  drill_ticket: TicketDrillPanel,
   drill_visitors: VisitorDrillPanel,
 };
 
@@ -445,25 +447,33 @@ export function SlideOverPanel() {
 
   if (!slideOver.isOpen) return null;
 
-  const isKpiPanel = slideOver.type?.startsWith('kpi_') || slideOver.type === 'drill_asset' || slideOver.type === 'drill_workforce' || slideOver.type === 'drill_site' || slideOver.type === 'drill_ppm' || slideOver.type === 'drill_visitors';
-  const isWidePanel = slideOver.type === 'drill_visitors';
-  const panelWidth = isKpiPanel
-    ? (isWidePanel ? 'w-full sm:w-[720px] sm:max-w-[95vw]' : 'w-full sm:w-[600px] sm:max-w-[95vw]')
-    : 'w-full sm:w-[480px] sm:max-w-[95vw]';
+  const isWidePanel =
+    slideOver.type?.startsWith('drill_') ||
+    slideOver.type === 'site' ||
+    slideOver.type === 'kpi_ticket_sla' ||
+    slideOver.type === 'kpi_ppm' ||
+    slideOver.type === 'kpi_asset' ||
+    slideOver.type === 'kpi_workforce';
+
+  const panelWidth = isWidePanel
+    ? 'w-full sm:w-[760px] sm:max-w-[95vw]'
+    : 'w-full sm:w-[540px] sm:max-w-[95vw]';
 
   const renderContent = () => {
-    if (!slideOver.data && !isKpiPanel) {
-      return <div className="text-sm text-muted-foreground">No details available</div>;
+    if (slideOver.type && KPI_PANEL_COMPONENTS[slideOver.type]) {
+      const PanelComponent = KPI_PANEL_COMPONENTS[slideOver.type];
+      return <PanelComponent />;
     }
 
-    if ((isKpiPanel || slideOver.type === 'drill_asset' || slideOver.type === 'drill_workforce' || slideOver.type === 'drill_site' || slideOver.type === 'drill_ppm' || slideOver.type === 'drill_visitors') && slideOver.type) {
-      const PanelComponent = KPI_PANEL_COMPONENTS[slideOver.type];
-      if (PanelComponent) return <PanelComponent />;
+    if (slideOver.type === 'site') {
+      return <SiteDrillPanel />;
+    }
+
+    if (slideOver.type === 'asset' && !(slideOver.data as any)?.asset_number) {
+      return <AssetDrillPanel />;
     }
 
     switch (slideOver.type) {
-      case 'site':
-        return <SiteDetailPanel site={slideOver.data as Site} />;
       case 'ticket':
         return <TicketDetailPanel ticket={slideOver.data as Ticket} />;
       case 'asset':
@@ -499,9 +509,9 @@ export function SlideOverPanel() {
       <div
         className="fixed inset-0 z-50 animate-fade-in"
         style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
         }}
         onClick={closeSlideOver}
       />
@@ -510,9 +520,10 @@ export function SlideOverPanel() {
       <div
         className={`fixed right-0 top-0 h-full ${panelWidth} max-w-full z-50 animate-slide-in-right overflow-hidden`}
         style={{
-          backgroundColor: 'var(--bg-card)',
+          backgroundColor: 'var(--drawer-bg, #0b111e)',
+          color: 'var(--text-primary)',
           borderLeft: '1px solid var(--border-color)',
-          boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.5)',
+          boxShadow: 'var(--shadow-elevation, -8px 0 32px rgba(0, 0, 0, 0.4))',
         }}
       >
         {/* Header */}
@@ -523,7 +534,7 @@ export function SlideOverPanel() {
             justifyContent: 'space-between',
             padding: '16px 20px',
             borderBottom: '1px solid var(--border-color)',
-            backgroundColor: 'var(--glass-bg)',
+            backgroundColor: 'var(--drawer-header-bg, var(--drawer-bg))',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -544,15 +555,15 @@ export function SlideOverPanel() {
             variant="ghost"
             size="icon"
             onClick={closeSlideOver}
-            className="h-8 w-8 rounded-full hover:bg-white/10"
+            className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
           >
-            <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Content */}
         <ScrollArea className="h-[calc(100%-57px)]">
-          <div className="p-5 min-w-0 overflow-x-hidden">
+          <div className="p-5 min-w-0 overflow-x-hidden text-foreground">
             {renderContent()}
           </div>
         </ScrollArea>

@@ -10,6 +10,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  PieChart,
+  Pie,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,7 +19,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { exportToXLSX } from '@/utils/exportData';
-import { Download, RefreshCw, MapPin, AlertTriangle, X, ChevronRight, ChevronLeft, User, Check, XCircle, Wrench, ClipboardList } from 'lucide-react';
+import { Download, RefreshCw, MapPin, AlertTriangle, X, ChevronRight, ChevronLeft, User, Check, XCircle, Wrench, ClipboardList, Activity } from 'lucide-react';
+import { ThemeChartTooltip } from './DrillDownPanels';
 
 const COLORS = {
   operational: '#22c55e',
@@ -124,6 +127,9 @@ export function SiteDrillPanel() {
   const [ppmFilter, setPpmFilter] = useState<string | null>(null);
   const [workforceFilter, setWorkforceFilter] = useState<WorkforceFilter>(null);
   const [workforcePage, setWorkforcePage] = useState(1);
+  type SiteChartType = 'Pie' | 'Vertical Bar' | 'Horizontal Bar';
+  const [siteChartType, setSiteChartType] = useState<SiteChartType>('Pie');
+  const [assetChartType, setAssetChartType] = useState<SiteChartType>('Pie');
 
   // Create modified filters with the current site_id for workforce drill
   const siteFilters = useMemo(() => ({
@@ -333,6 +339,153 @@ export function SiteDrillPanel() {
             <StatCard label="Breached" value={data.summary.breached_tickets} color="text-critical" />
             <StatCard label="Total Assets" value={data.summary.total_assets} />
             <StatCard label="Total Staff" value={data.summary.total_staff} />
+          </div>
+
+          {/* Site Operational Health & Adherence Breakdown Box */}
+          <div className="p-4 rounded-xl border border-border bg-card space-y-4 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                <h4 className="text-xs font-bold text-foreground tracking-wide uppercase">
+                  Site Operations & Adherence Breakdown
+                </h4>
+              </div>
+
+              <div className="flex items-center flex-wrap gap-2">
+                <div className="flex items-center gap-0.5 bg-muted/80 p-0.5 rounded-lg border border-border">
+                  {(['Pie', 'Vertical Bar', 'Horizontal Bar'] as SiteChartType[]).map((type) => {
+                    const isSelected = siteChartType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setSiteChartType(type)}
+                        className={cn(
+                          'px-2.5 py-1 text-2xs font-bold rounded-md transition-all cursor-pointer',
+                          isSelected
+                            ? 'bg-background text-foreground shadow-xs border border-border'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                        )}
+                      >
+                        {type}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-healthy/10 text-healthy border border-healthy/30">
+                  Health: {data.summary.health_score}%
+                </span>
+              </div>
+            </div>
+
+            <div style={{ height: '200px', width: '100%', position: 'relative' }}>
+              {siteChartType === 'Pie' ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Tooltip content={<ThemeChartTooltip />} />
+                    <Pie
+                      data={[
+                        { name: 'Health Score', shortName: 'Health', count: data.summary.health_score, fill: '#00C853' },
+                        { name: 'SLA Adherence', shortName: 'SLA', count: data.summary.sla_percentage, fill: '#FF5B22' },
+                        { name: 'PPM Compliance', shortName: 'PPM', count: data.summary.ppm_percentage, fill: '#3B82F6' },
+                        { name: 'Workforce Availability', shortName: 'Workforce', count: data.summary.workforce_percentage, fill: '#8B5CF6' },
+                      ]}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={78}
+                      paddingAngle={3}
+                    >
+                      {[
+                        { fill: '#00C853' },
+                        { fill: '#FF5B22' },
+                        { fill: '#3B82F6' },
+                        { fill: '#8B5CF6' },
+                      ].map((entry, index) => (
+                        <Cell key={`site-pie-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : siteChartType === 'Vertical Bar' ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { name: 'Health Score', shortName: 'Health', count: data.summary.health_score, fill: '#00C853' },
+                      { name: 'SLA Adherence', shortName: 'SLA', count: data.summary.sla_percentage, fill: '#FF5B22' },
+                      { name: 'PPM Compliance', shortName: 'PPM', count: data.summary.ppm_percentage, fill: '#3B82F6' },
+                      { name: 'Workforce Availability', shortName: 'Workforce', count: data.summary.workforce_percentage, fill: '#8B5CF6' },
+                    ]}
+                    margin={{ top: 10, right: 15, left: -20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                    <XAxis dataKey="shortName" fontSize={11} stroke="var(--text-muted)" />
+                    <YAxis fontSize={11} stroke="var(--text-muted)" domain={[0, 100]} />
+                    <Tooltip content={<ThemeChartTooltip />} />
+                    <Bar dataKey="count" name="Score %" radius={[5, 5, 0, 0]} barSize={36}>
+                      {[
+                        { fill: '#00C853' },
+                        { fill: '#FF5B22' },
+                        { fill: '#3B82F6' },
+                        { fill: '#8B5CF6' },
+                      ].map((entry, index) => (
+                        <Cell key={`site-vbar-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { name: 'Health Score', shortName: 'Health', count: data.summary.health_score, fill: '#00C853' },
+                      { name: 'SLA Adherence', shortName: 'SLA', count: data.summary.sla_percentage, fill: '#FF5B22' },
+                      { name: 'PPM Compliance', shortName: 'PPM', count: data.summary.ppm_percentage, fill: '#3B82F6' },
+                      { name: 'Workforce Availability', shortName: 'Workforce', count: data.summary.workforce_percentage, fill: '#8B5CF6' },
+                    ]}
+                    layout="vertical"
+                    margin={{ top: 10, right: 25, left: 10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-color)" />
+                    <XAxis type="number" fontSize={11} stroke="var(--text-muted)" domain={[0, 100]} />
+                    <YAxis type="category" dataKey="shortName" fontSize={11} stroke="var(--text-muted)" width={75} />
+                    <Tooltip content={<ThemeChartTooltip />} />
+                    <Bar dataKey="count" name="Score %" radius={[0, 5, 5, 0]} barSize={20}>
+                      {[
+                        { fill: '#00C853' },
+                        { fill: '#FF5B22' },
+                        { fill: '#3B82F6' },
+                        { fill: '#8B5CF6' },
+                      ].map((entry, index) => (
+                        <Cell key={`site-hbar-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+
+              {siteChartType === 'Pie' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    textAlign: 'center',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
+                    {data.summary.health_score}%
+                  </div>
+                  <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-muted)', marginTop: '3px' }}>
+                    Overall Health
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <SectionTitle>Blocks</SectionTitle>
@@ -633,20 +786,80 @@ export function SiteDrillPanel() {
             <>
               {assetBreakdownData.filter((d) => d.value > 0).length > 0 && (
                 <>
-                  <SectionTitle>Status Distribution</SectionTitle>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <BarChart data={assetBreakdownData.filter((d) => d.value > 0)}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                      <YAxis tick={{ fontSize: 10 }} />
-                      <Tooltip />
-                      <Bar dataKey="value" name="Assets" radius={[4, 4, 0, 0]}>
-                        {assetBreakdownData.filter((d) => d.value > 0).map((entry, i) => (
-                          <Cell key={i} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="flex items-center justify-between pb-2 border-b border-border">
+                    <SectionTitle>Status Distribution</SectionTitle>
+                    <div className="flex items-center gap-0.5 bg-muted/80 p-0.5 rounded-lg border border-border">
+                      {(['Pie', 'Vertical Bar', 'Horizontal Bar'] as SiteChartType[]).map((type) => {
+                        const isSelected = assetChartType === type;
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => setAssetChartType(type)}
+                            className={cn(
+                              'px-2 py-0.5 text-2xs font-bold rounded-md transition-all cursor-pointer',
+                              isSelected
+                                ? 'bg-background text-foreground shadow-xs border border-border'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                            )}
+                          >
+                            {type}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ height: '170px', width: '100%', position: 'relative' }}>
+                    {assetChartType === 'Pie' ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Tooltip content={<ThemeChartTooltip />} />
+                          <Pie
+                            data={assetBreakdownData.filter((d) => d.value > 0)}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={45}
+                            outerRadius={68}
+                            paddingAngle={2}
+                          >
+                            {assetBreakdownData.filter((d) => d.value > 0).map((entry, i) => (
+                              <Cell key={i} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : assetChartType === 'Vertical Bar' ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={assetBreakdownData.filter((d) => d.value > 0)} margin={{ top: 10, right: 15, left: -20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                          <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="var(--text-muted)" />
+                          <YAxis tick={{ fontSize: 10 }} stroke="var(--text-muted)" />
+                          <Tooltip content={<ThemeChartTooltip />} />
+                          <Bar dataKey="value" name="Assets" radius={[4, 4, 0, 0]} barSize={32}>
+                            {assetBreakdownData.filter((d) => d.value > 0).map((entry, i) => (
+                              <Cell key={i} fill={entry.fill} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={assetBreakdownData.filter((d) => d.value > 0)} layout="vertical" margin={{ top: 5, right: 25, left: 10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-color)" />
+                          <XAxis type="number" fontSize={10} stroke="var(--text-muted)" />
+                          <YAxis type="category" dataKey="name" fontSize={10} stroke="var(--text-muted)" width={85} />
+                          <Tooltip content={<ThemeChartTooltip />} />
+                          <Bar dataKey="value" name="Assets" radius={[0, 4, 4, 0]} barSize={18}>
+                            {assetBreakdownData.filter((d) => d.value > 0).map((entry, i) => (
+                              <Cell key={i} fill={entry.fill} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
                 </>
               )}
               {data.assets.by_category.length > 0 && (

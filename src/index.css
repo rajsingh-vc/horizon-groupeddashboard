@@ -77,6 +77,14 @@
   --table-hover-bg: #00c85314;
   --card-elevated-bg: #171f30cc;
   --card-elevated-border: #ffffff1f;
+  --dropdown-bg: #111827;
+  --dropdown-border: rgba(255, 255, 255, 0.15);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --shadow-elevation: 0 16px 36px -4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
+  --text-primary: #ffffff;
+  --drawer-bg: #0b111e;
+  --bg-card: #0f172a;
+  --drawer-header-bg: #090e18;
 
   /* Tailwind integration mappings */
   --background: 222 47% 5%;
@@ -99,10 +107,27 @@
   --input: 217 33% 18%;
   --ring: 142 100% 39%;
   --radius: 0.75rem;
+
+  /* Enterprise BI Status Colors */
+  --status-healthy: 142 76% 45%;
+  --status-healthy-bg: 142 76% 45%;
+  --status-healthy-foreground: 0 0% 100%;
+  --status-warning: 38 92% 50%;
+  --status-warning-bg: 38 92% 50%;
+  --status-warning-foreground: 0 0% 100%;
+  --status-critical: 0 84% 60%;
+  --status-critical-bg: 0 84% 60%;
+  --status-critical-foreground: 0 0% 100%;
+
+  /* Panel & KPI Colors */
+  --panel-overlay: 222 47% 5%;
+  --panel-bg: 222 47% 8%;
+  --panel-header: 222 47% 6%;
 }
 
 :root[data-theme="light"],
-[data-theme="light"] {
+[data-theme="light"],
+.light {
   --bg-primary: #f8fafc;
   --bg-gradient: radial-gradient(circle at 85% 5%, #00c85312 0%, transparent 40%),
     radial-gradient(circle at 15% 5%, #ff5b220f 0%, transparent 35%),
@@ -138,9 +163,17 @@
   --table-even-bg: #ffffff;
   --table-odd-bg: #f8fafc;
   --table-border: #f1f5f9;
+  --dropdown-bg: #ffffff;
+  --dropdown-border: rgba(0, 0, 0, 0.12);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --shadow-elevation: 0 12px 30px -4px rgba(0, 0, 0, 0.15);
+  --text-primary: #0f172a;
   --table-hover-bg: #00c8530f;
   --card-elevated-bg: #ffffff;
   --card-elevated-border: #e2e8f0;
+  --drawer-bg: #ffffff;
+  --bg-card: #ffffff;
+  --drawer-header-bg: #f8fafc;
 
   --background: 210 40% 98%;
   --foreground: 222 47% 11%;
@@ -148,9 +181,35 @@
   --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
-  --primary: 142 100% 39%;
+  --primary: 158 64% 36%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
   --border: 214 32% 91%;
   --input: 214 32% 91%;
+  --ring: 158 64% 36%;
+
+  /* Status Colors for Light Mode (High Contrast, AA Compliant) */
+  --status-healthy: 158 64% 36%;
+  --status-healthy-bg: 158 64% 36%;
+  --status-healthy-foreground: 0 0% 100%;
+  --status-warning: 32 95% 44%;
+  --status-warning-bg: 32 95% 44%;
+  --status-warning-foreground: 0 0% 100%;
+  --status-critical: 0 72% 51%;
+  --status-critical-bg: 0 72% 51%;
+  --status-critical-foreground: 0 0% 100%;
+
+  /* Panel & KPI Colors */
+  --panel-overlay: 222 47% 11%;
+  --panel-bg: 0 0% 100%;
+  --panel-header: 210 40% 98%;
 }
 
 * {
@@ -347,4 +406,58 @@ body {
     min-width: 0 !important;
     max-width: 100vw !important;
   }
+}
+
+
+/* Wave Dots Loading Animation & Centered KPI Grid */
+@keyframes waveDots {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  30% {
+    transform: translateY(-9px) scale(1.2);
+    opacity: 1;
+  }
+}
+
+.wave-dots-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.wave-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--horizon-green-bright, #00C853);
+  box-shadow: 0 0 12px rgba(0, 200, 83, 0.6);
+  animation: waveDots 1.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.wave-dot:nth-child(1),
+.wave-dot-1 {
+  animation-delay: 0s;
+}
+
+.wave-dot:nth-child(2),
+.wave-dot-2 {
+  animation-delay: 0.2s;
+}
+
+.wave-dot:nth-child(3),
+.wave-dot-3 {
+  animation-delay: 0.4s;
+}
+
+.kpi-grid {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  align-items: stretch !important;
+  gap: 14px !important;
+  width: 100% !important;
 }

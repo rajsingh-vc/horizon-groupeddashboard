@@ -10,29 +10,31 @@ const axiosInstance = axios.create({
 });
 
 // Module-level overrides for public (no-localStorage) dashboards
-let publicToken: string | null = null;
+let publicToken: string | null = "442176831c6904571c640e95b48c4bb00bc4525207afcb4e";
 let publicSiteId: string | number | null = null;
 
 export function setPublicAuth(token: string | null, siteId: string | number | null) {
-  publicToken = token ? String(token).replace(/^"|"$/g, '') : null;
+  publicToken = token ? String(token).replace(/^"|"$/g, '') : "442176831c6904571c640e95b48c4bb00bc4525207afcb4e";
   publicSiteId = siteId ?? null;
 }
 
 export function clearPublicAuth() {
-  publicToken = null;
+  publicToken = "442176831c6904571c640e95b48c4bb00bc4525207afcb4e";
   publicSiteId = null;
 }
 
 axiosInstance.interceptors.request.use((config) => {
   // Prefer module-level public auth when present (used for incognito/public dashboards)
-  const token = publicToken ?? localStorage.getItem('token') ?? localStorage.getItem('auth_token');
+  const developmentToken = import.meta.env.DEV ? import.meta.env.VITE_DEV_API_TOKEN : null;
+  const configuredToken = publicToken || developmentToken;
+  const token = configuredToken || localStorage.getItem('token') || localStorage.getItem('auth_token');
   if (token && config.headers) {
     (config.headers as Record<string, any>)['Authorization'] = `${token}`;
   }
 
   // Ensure site_id and token are passed as query params for APIs that expect them
   const params = (config.params as Record<string, any>) || {};
-  if (publicToken) params.token = publicToken;
+  if (token) params.token = token;
   if (publicSiteId) params.site_id = publicSiteId;
   config.params = params;
 

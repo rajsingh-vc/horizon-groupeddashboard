@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import {
   startOfDay,
   endOfDay,
@@ -136,9 +136,10 @@ export function useSitePerformance(filters: FilterState) {
 
 export function useSiteDrill(filters: FilterState, siteId: number | string | null) {
   const { currentRole } = useDashboard();
+  const effectiveSiteId = siteId || filters.site_id || 78;
   const params = filtersToApiParams(filters, mapRole(currentRole)) as SiteDrillParams;
-  params.site_id = siteId ?? 0;
-  const enabled = Boolean(siteId);
+  params.site_id = effectiveSiteId;
+  const enabled = Boolean(effectiveSiteId);
   return useQuery({
     queryKey: ['grouped_dashboard', 'site_drill', currentRole, filters.date_range, params],
     queryFn: () => fetchSiteDrill(params),
@@ -157,42 +158,70 @@ export function useAssetPortfolio(filters: FilterState) {
   });
 }
 
-export function useAssetDrill(filters: FilterState, drillParams: { status?: string; category?: string }) {
+export function useAssetDrill(filters: FilterState, drillParams: { status?: string; category?: string } = {}) {
   const { currentRole } = useDashboard();
   const params = filtersToApiParams(filters, mapRole(currentRole)) as AssetDrillParams;
-  Object.assign(params, drillParams);
-  const enabled = Boolean(drillParams.status || drillParams.category);
+  if (drillParams.status && drillParams.status !== 'all') {
+    params.status = drillParams.status;
+  }
+  if (drillParams.category && drillParams.category !== 'all') {
+    params.category = drillParams.category;
+  }
   return useQuery({
     queryKey: ['grouped_dashboard', 'asset_drill', currentRole, filters.date_range, params],
     queryFn: () => fetchAssetDrill(params),
     ...QUERY_DEFAULTS,
-    enabled,
+    enabled: true,
   });
 }
 
-export function useWorkforceDrill(filters: FilterState, drillParams: { vendor?: string; work_type?: string; attendance?: 'present' | 'absent' }) {
+export function useWorkforceDrill(filters: FilterState, drillParams: { vendor?: string; work_type?: string; attendance?: 'present' | 'absent' } = {}) {
   const { currentRole } = useDashboard();
   const params = filtersToApiParams(filters, mapRole(currentRole)) as WorkforceDrillParams;
-  Object.assign(params, drillParams);
-  const enabled = Boolean(drillParams.vendor || drillParams.work_type || drillParams.attendance);
+  if (drillParams.vendor && drillParams.vendor !== 'all') params.vendor = drillParams.vendor;
+  if (drillParams.work_type && drillParams.work_type !== 'all') params.work_type = drillParams.work_type;
+  if (drillParams.attendance) params.attendance = drillParams.attendance;
   return useQuery({
     queryKey: ['grouped_dashboard', 'workforce_drill', currentRole, filters.date_range, params],
     queryFn: () => fetchWorkforceDrill(params),
     ...QUERY_DEFAULTS,
-    enabled,
+    enabled: true,
   });
 }
 
 export function usePPMDrill(filters: FilterState, category: string | null) {
   const { currentRole } = useDashboard();
   const params = filtersToApiParams(filters, mapRole(currentRole)) as PPMDrillParams;
-  params.category = category ?? '';
+  if (category) {
+    params.category = category;
+  }
   const enabled = Boolean(category);
   return useQuery({
     queryKey: ['grouped_dashboard', 'ppm_drill', currentRole, filters.date_range, params],
     queryFn: () => fetchPPMDrill(params),
     ...QUERY_DEFAULTS,
     enabled,
+  });
+}
+
+export function useAllPPMDrill(filters: FilterState, categories: string[], enabled: boolean = true) {
+  const { currentRole } = useDashboard();
+  const params = filtersToApiParams(filters, mapRole(currentRole)) as PPMDrillParams;
+
+  return useQueries({
+    queries: (categories || []).map((cat) => ({
+      queryKey: ['grouped_dashboard', 'ppm_drill_batch', currentRole, filters.date_range, cat, params],
+      queryFn: async () => {
+        try {
+          const res = await fetchPPMDrill({ ...params, category: cat });
+          return { category: cat, ...res };
+        } catch {
+          return { category: cat, total: 0, completed: 0, records: [] as any[] };
+        }
+      },
+      ...QUERY_DEFAULTS,
+      enabled: enabled && Boolean(cat),
+    })),
   });
 }
 

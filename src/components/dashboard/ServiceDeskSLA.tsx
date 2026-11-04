@@ -73,6 +73,70 @@ const CATEGORY_COLORS = [
   '#F43F5E',
 ];
 
+// Custom high-contrast chart tooltip for dark dashboard
+const ServiceDeskChartTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div
+        style={{
+          backgroundColor: '#0F172A',
+          border: '1px solid rgba(255, 255, 255, 0.25)',
+          borderRadius: '8px',
+          padding: '8px 12px',
+          boxShadow: '0 12px 28px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 0, 0, 0.5)',
+          color: '#FFFFFF',
+          fontSize: '12px',
+          pointerEvents: 'none',
+          zIndex: 9999,
+        }}
+      >
+        {label && (
+          <div style={{ color: '#94A3B8', fontSize: '11px', fontWeight: 600, marginBottom: '4px' }}>
+            {label}
+          </div>
+        )}
+        {payload.map((entry: any, index: number) => {
+          const color = entry.color || entry.fill || entry.payload?.fill || '#FF5B22';
+          const name = entry.name || entry.dataKey || label;
+          const value = entry.value;
+          return (
+            <div
+              key={index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#FFFFFF',
+                marginTop: index > 0 ? '4px' : '0',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: color,
+                    display: 'inline-block',
+                  }}
+                />
+                <span style={{ color: '#CBD5E1' }}>{name}</span>
+              </div>
+              <span style={{ fontWeight: 800, color: '#FFFFFF', fontFamily: 'monospace' }}>
+                {value}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
+};
+
 export function ServiceDeskSLA() {
   const { openSlideOver, filters, updateFilter } = useDashboard();
   const { data, isPending: isLoading } = useServiceDesk(filters);
@@ -539,165 +603,164 @@ export function ServiceDeskSLA() {
           }}
         >
           <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '14px',
-                flexWrap: 'wrap',
-                gap: '8px',
-              }}
-            >
-              <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                   Tickets by Category
                 </h4>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                  Distribution of logged service requests across categories.
-                </p>
-              </div>
 
-              {/* Chart switchers */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {/* Visualizer Type Pill */}
-                <div ref={chartDropdownRef} style={{ position: 'relative' }}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setChartTypeDropdownOpen(!chartTypeDropdownOpen);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '4px 10px',
-                      backgroundColor: 'var(--glass-bg)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '6px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.6875rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <span>{chartType}</span>
-                    <ChevronDown size={12} />
-                  </button>
-                  {chartTypeDropdownOpen && (
-                    <div
+                {/* Chart switchers */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {/* Visualizer Type Pill */}
+                  <div ref={chartDropdownRef} style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setChartTypeDropdownOpen(!chartTypeDropdownOpen);
+                      }}
                       style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 4px)',
-                        right: 0,
-                        width: '130px',
-                        backgroundColor: 'var(--dropdown-bg)',
-                        border: '1px solid var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 10px',
+                        backgroundColor: 'var(--glass-bg, rgba(255, 255, 255, 0.06))',
+                        border: '1px solid var(--border-color, rgba(255, 255, 255, 0.15))',
                         borderRadius: '6px',
-                        boxShadow: 'var(--shadow-elevation)',
-                        zIndex: 60,
-                        padding: '4px',
+                        color: 'var(--text-primary, #FFFFFF)',
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
                       }}
                     >
-                      {CHART_TYPES.map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setChartType(type);
-                            setChartTypeDropdownOpen(false);
-                          }}
-                          style={{
-                            width: '100%',
-                            textAlign: 'left',
-                            padding: '6px 8px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: chartType === type ? 'rgba(255, 91, 34, 0.15)' : 'transparent',
-                            color: chartType === type ? '#FF7A45' : 'var(--text-primary)',
-                            fontSize: '0.75rem',
-                            fontWeight: chartType === type ? 700 : 500,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {type}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                      <span>{chartType}</span>
+                      <ChevronDown size={12} />
+                    </button>
+                    {chartTypeDropdownOpen && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 'calc(100% + 4px)',
+                          left: 0,
+                          minWidth: '130px',
+                          backgroundColor: 'var(--dropdown-bg, #111827)',
+                          border: '1px solid var(--dropdown-border, rgba(255, 255, 255, 0.2))',
+                          borderRadius: '8px',
+                          boxShadow: 'var(--shadow-elevation, 0 16px 36px -4px rgba(0, 0, 0, 0.8))',
+                          zIndex: 100,
+                          padding: '4px',
+                        }}
+                      >
+                        {CHART_TYPES.map((type) => {
+                          const isSelected = chartType === type;
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setChartType(type);
+                                setChartTypeDropdownOpen(false);
+                              }}
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '7px 10px',
+                                borderRadius: '5px',
+                                border: 'none',
+                                backgroundColor: isSelected ? 'rgba(255, 91, 34, 0.25)' : 'transparent',
+                                color: isSelected ? '#FF7A45' : 'var(--text-primary, #FFFFFF)',
+                                fontSize: '0.75rem',
+                                fontWeight: isSelected ? 700 : 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {type}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Top N Dropdown */}
-                <div ref={topNDropdownRef} style={{ position: 'relative' }}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTopNDropdownOpen(!topNDropdownOpen);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '4px 10px',
-                      backgroundColor: 'var(--glass-bg)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '6px',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.6875rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <span>{topN}</span>
-                    <ChevronDown size={12} />
-                  </button>
-                  {topNDropdownOpen && (
-                    <div
+                  {/* Top N Dropdown */}
+                  <div ref={topNDropdownRef} style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTopNDropdownOpen(!topNDropdownOpen);
+                      }}
                       style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 4px)',
-                        right: 0,
-                        width: '100px',
-                        backgroundColor: 'var(--dropdown-bg)',
-                        border: '1px solid var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 10px',
+                        backgroundColor: 'var(--glass-bg, rgba(255, 255, 255, 0.06))',
+                        border: '1px solid var(--border-color, rgba(255, 255, 255, 0.15))',
                         borderRadius: '6px',
-                        boxShadow: 'var(--shadow-elevation)',
-                        zIndex: 60,
-                        padding: '4px',
+                        color: 'var(--text-primary, #FFFFFF)',
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
                       }}
                     >
-                      {TOP_N_OPTIONS.map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setTopN(opt);
-                            setTopNDropdownOpen(false);
-                          }}
-                          style={{
-                            width: '100%',
-                            textAlign: 'left',
-                            padding: '6px 8px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: topN === opt ? 'rgba(255, 91, 34, 0.15)' : 'transparent',
-                            color: topN === opt ? '#FF7A45' : 'var(--text-primary)',
-                            fontSize: '0.75rem',
-                            fontWeight: topN === opt ? 700 : 500,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                      <span>{topN}</span>
+                      <ChevronDown size={12} />
+                    </button>
+                    {topNDropdownOpen && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 'calc(100% + 4px)',
+                          right: 0,
+                          minWidth: '100px',
+                          backgroundColor: 'var(--dropdown-bg, #111827)',
+                          border: '1px solid var(--dropdown-border, rgba(255, 255, 255, 0.2))',
+                          borderRadius: '8px',
+                          boxShadow: 'var(--shadow-elevation, 0 16px 36px -4px rgba(0, 0, 0, 0.8))',
+                          zIndex: 100,
+                          padding: '4px',
+                        }}
+                      >
+                        {TOP_N_OPTIONS.map((opt) => {
+                          const isSelected = topN === opt;
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTopN(opt);
+                                setTopNDropdownOpen(false);
+                              }}
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '7px 10px',
+                                borderRadius: '5px',
+                                border: 'none',
+                                backgroundColor: isSelected ? 'rgba(255, 91, 34, 0.25)' : 'transparent',
+                                color: isSelected ? '#FF7A45' : 'var(--text-primary, #FFFFFF)',
+                                fontSize: '0.75rem',
+                                fontWeight: isSelected ? 700 : 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {opt}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                Distribution of logged service requests across categories.
+              </p>
             </div>
 
             {/* Chart Container */}
@@ -712,7 +775,7 @@ export function ServiceDeskSLA() {
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-color)" />
                     <XAxis type="number" fontSize={10} stroke="var(--text-muted)" allowDecimals={false} />
                     <YAxis type="category" dataKey="category" fontSize={10} stroke="var(--text-muted)" width={85} tickFormatter={(val) => (val?.length > 13 ? `${val.substring(0, 12)}…` : val)} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--dropdown-bg)', borderColor: 'var(--border-color)', borderRadius: '8px', fontSize: '11px', color: 'var(--text-primary)' }} />
+                    <Tooltip content={<ServiceDeskChartTooltip />} />
                     <Bar
                       dataKey="count"
                       name="Tickets"
@@ -733,7 +796,7 @@ export function ServiceDeskSLA() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
                     <XAxis dataKey="category" fontSize={9} stroke="var(--text-muted)" angle={-25} textAnchor="end" interval={0} tickFormatter={(val) => (val?.length > 10 ? `${val.substring(0, 9)}…` : val)} />
                     <YAxis fontSize={10} stroke="var(--text-muted)" allowDecimals={false} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--dropdown-bg)', borderColor: 'var(--border-color)', borderRadius: '8px', fontSize: '11px', color: 'var(--text-primary)' }} />
+                    <Tooltip content={<ServiceDeskChartTooltip />} />
                     <Bar
                       dataKey="count"
                       name="Tickets"
@@ -754,7 +817,7 @@ export function ServiceDeskSLA() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                     <XAxis dataKey="category" fontSize={9} stroke="var(--text-muted)" angle={-25} textAnchor="end" interval={0} tickFormatter={(val) => (val?.length > 10 ? `${val.substring(0, 9)}…` : val)} />
                     <YAxis fontSize={10} stroke="var(--text-muted)" allowDecimals={false} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--dropdown-bg)', borderColor: 'var(--border-color)', borderRadius: '8px', fontSize: '11px', color: 'var(--text-primary)' }} />
+                    <Tooltip content={<ServiceDeskChartTooltip />} />
                     <Line type="monotone" dataKey="count" stroke="#FF5B22" strokeWidth={2.5} dot={{ r: 4, fill: '#FF5B22' }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -770,14 +833,14 @@ export function ServiceDeskSLA() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                     <XAxis dataKey="category" fontSize={9} stroke="var(--text-muted)" angle={-25} textAnchor="end" interval={0} tickFormatter={(val) => (val?.length > 10 ? `${val.substring(0, 9)}…` : val)} />
                     <YAxis fontSize={10} stroke="var(--text-muted)" allowDecimals={false} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--dropdown-bg)', borderColor: 'var(--border-color)', borderRadius: '8px', fontSize: '11px', color: 'var(--text-primary)' }} />
+                    <Tooltip content={<ServiceDeskChartTooltip />} />
                     <Area type="monotone" dataKey="count" stroke="#FF5B22" strokeWidth={2.2} fill="url(#ticketAreaGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : chartType === 'Donut' || chartType === 'Pie' ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--dropdown-bg)', borderColor: 'var(--border-color)', borderRadius: '8px', fontSize: '11px', color: 'var(--text-primary)' }} />
+                    <Tooltip content={<ServiceDeskChartTooltip />} />
                     <Pie
                       data={displayedCategories}
                       dataKey="count"
@@ -803,7 +866,7 @@ export function ServiceDeskSLA() {
                     <PolarAngleAxis dataKey="category" fontSize={9} stroke="var(--text-muted)" tickFormatter={(val) => (val?.length > 8 ? `${val.substring(0, 7)}…` : val)} />
                     <PolarRadiusAxis fontSize={9} stroke="var(--text-muted)" />
                     <Radar name="Tickets" dataKey="count" stroke="#FF5B22" fill="#FF5B22" fillOpacity={0.4} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--dropdown-bg)', borderColor: 'var(--border-color)', borderRadius: '8px', fontSize: '11px', color: 'var(--text-primary)' }} />
+                    <Tooltip content={<ServiceDeskChartTooltip />} />
                   </RadarChart>
                 </ResponsiveContainer>
               )}
