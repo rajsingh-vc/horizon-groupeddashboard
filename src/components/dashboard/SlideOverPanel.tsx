@@ -411,27 +411,27 @@ function AlertDetailPanel({ alert }: { alert: Alert }) {
 }
 
 const KPI_TITLES: Record<string, string> = {
-  kpi_ticket_sla: 'Service Desk & SLA Intelligence',
-  kpi_ppm: 'Planned Preventive Maintenance & Soft Services',
-  kpi_asset: 'Asset Portfolio & Health',
+  kpi_ticket_sla: 'Ticket SLA Health',
+  kpi_ppm: 'PPM Compliance',
+  kpi_asset: 'Asset Health',
   kpi_workforce: 'Workforce Availability',
   kpi_vendor_sla: 'Vendor SLA',
   kpi_visitors: 'Visitors Today',
   kpi_avg_resolution: 'Avg Resolution Time',
-  drill_asset: 'Asset Portfolio & Health',
-  drill_workforce: 'Workforce Tracking',
-  drill_site: 'Site Performance at a Glance',
-  drill_ppm: 'PPM Compliance & Checklist Telemetry',
-  drill_soft_services: 'Soft Services Operations & Daily Audit',
-  drill_ticket: 'Service Desk & SLA Intelligence',
+  drill_asset: 'Asset Drill-down',
+  drill_workforce: 'Workforce Drill-down',
+  drill_site: 'Site Details',
+  drill_ppm: 'PPM Drill-down',
   drill_visitors: 'Visitor Details',
+  drill_ticket: 'Ticket Drill-down',
+  drill_soft_services: 'Soft Services',
 };
 
 const KPI_PANEL_COMPONENTS: Record<string, React.ComponentType> = {
-  kpi_ticket_sla: TicketDrillPanel,
-  kpi_ppm: PPMDrillPanel,
-  kpi_asset: AssetDrillPanel,
-  kpi_workforce: WorkforceDrillPanel,
+  kpi_ticket_sla: TicketSLAPanel,
+  kpi_ppm: PPMCompliancePanel,
+  kpi_asset: AssetHealthPanel,
+  kpi_workforce: WorkforcePanel,
   kpi_vendor_sla: VendorSLAPanel,
   kpi_visitors: VisitorsTodayPanel,
   kpi_avg_resolution: AvgResolutionPanel,
@@ -439,9 +439,9 @@ const KPI_PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   drill_workforce: WorkforceDrillPanel,
   drill_site: SiteDrillPanel,
   drill_ppm: PPMDrillPanel,
-  drill_soft_services: PPMDrillPanel,
-  drill_ticket: TicketDrillPanel,
   drill_visitors: VisitorDrillPanel,
+  drill_ticket: TicketDrillPanel,
+  drill_soft_services: PPMDrillPanel,
 };
 
 export function SlideOverPanel() {

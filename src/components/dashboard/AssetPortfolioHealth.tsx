@@ -83,9 +83,13 @@ export function AssetPortfolioHealth() {
     [summary]
   );
 
-  const handleDrill = (tab?: 'ALL' | 'OPERATIONAL' | 'BREAKDOWN') => {
-    openSlideOver('asset', {
-      type: 'assets',
+  const handleDrill = (tab?: 'ALL' | 'OPERATIONAL' | 'BREAKDOWN', categoryName?: string) => {
+    const status = tab === 'OPERATIONAL' ? 'operational' : tab === 'BREAKDOWN' ? 'maintenance' : undefined;
+    openSlideOver('drill_asset', {
+      category: categoryName,
+      status,
+      type: categoryName ? 'category' : status ? 'status' : 'all',
+      value: categoryName || status || 'all',
       title: 'Asset Portfolio & Health Telemetry',
       tab: tab || 'ALL',
       summary,
@@ -586,8 +590,8 @@ export function AssetPortfolioHealth() {
                       fontSize: '0.75rem',
                     }}
                   />
-                  <Bar dataKey="total" fill="#3B82F6" name="Total Units" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="operational" fill="#00E676" name="Operational" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" fill="#3B82F6" name="Total Units" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d: any) => { const cat = d?.name || d?.payload?.name; if (cat) handleDrill(undefined, cat); }} />
+                  <Bar dataKey="operational" fill="#00E676" name="Operational" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d: any) => { const cat = d?.name || d?.payload?.name; if (cat) handleDrill(undefined, cat); }} />
                 </BarChart>
               </ResponsiveContainer>
             )}

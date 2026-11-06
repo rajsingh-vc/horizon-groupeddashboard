@@ -953,7 +953,7 @@ export function PPMSoftServices() {
                   return (
                     <div
                       key={item.name || idx}
-                      onClick={() => openSlideOver(mode === 'soft_services' ? 'drill_soft_services' : 'drill_ppm', { category: item.name } as never)}
+                      onClick={() => openSlideOver(mode === 'soft_services' ? 'drill_soft_services' : 'drill_ppm', { type: 'category', value: item.name, category: item.name, is_soft: mode === 'soft_services' } as never)}
                       style={{
                         padding: '8px 12px',
                         borderRadius: '8px',

@@ -152,6 +152,11 @@ export function ServiceDeskSLA() {
   const topNDropdownRef = useRef<HTMLDivElement>(null);
   const siteDropdownRef = useRef<HTMLDivElement>(null);
 
+  const handleCategoryDrill = (d: any) => {
+    const cat = d?.category || d?.payload?.category || d?.name || d?.payload?.name;
+    openSlideOver('drill_ticket', { type: 'category', value: cat, category: cat } as never);
+  };
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (chartDropdownRef.current && !chartDropdownRef.current.contains(e.target as Node)) {
@@ -782,7 +787,7 @@ export function ServiceDeskSLA() {
                       radius={[0, 4, 4, 0]}
                       barSize={18}
                       cursor="pointer"
-                      onClick={(d) => openSlideOver('drill_ticket', { type: 'category', value: d?.category } as never)}
+                      onClick={(d) => handleCategoryDrill(d)}
                     >
                       {displayedCategories.map((entry, index) => (
                         <Cell key={`cell-hbar-${index}`} fill={entry.color} />
@@ -803,7 +808,7 @@ export function ServiceDeskSLA() {
                       radius={[4, 4, 0, 0]}
                       barSize={20}
                       cursor="pointer"
-                      onClick={(d) => openSlideOver('drill_ticket', { type: 'category', value: d?.category } as never)}
+                      onClick={(d) => handleCategoryDrill(d)}
                     >
                       {displayedCategories.map((entry, index) => (
                         <Cell key={`cell-vbar-${index}`} fill={entry.color} />
@@ -851,7 +856,7 @@ export function ServiceDeskSLA() {
                       outerRadius={75}
                       paddingAngle={chartType === 'Donut' ? 3 : 1}
                       cursor="pointer"
-                      onClick={(d) => openSlideOver('drill_ticket', { type: 'category', value: d?.category } as never)}
+                      onClick={(d) => handleCategoryDrill(d)}
                     >
                       {displayedCategories.map((entry, index) => (
                         <Cell key={`cell-pie-${index}`} fill={entry.color} />

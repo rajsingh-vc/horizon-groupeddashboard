@@ -243,6 +243,16 @@ export function WorkforceTracking() {
   const selectedSiteObj = sites.find((s) => s.id === filters.site_id);
   const selectedSiteName = selectedSiteObj?.name || 'All Sites';
 
+  const handleRoleDrill = (d: any) => {
+    const role = d?.type || d?.payload?.type || d?.name || d?.payload?.name;
+    openSlideOver('drill_workforce', (role ? { type: 'work_type', value: role, work_type: role } : {}) as never);
+  };
+
+  const handleVendorDrill = (d: any) => {
+    const vName = d?.name || d?.payload?.name || d?.vendor || d?.payload?.vendor;
+    openSlideOver('drill_workforce', (vName ? { type: 'vendor', value: vName, vendor: vName } : {}) as never);
+  };
+
   const isLowAvailability = overallAvailability < 50;
 
   return (
@@ -646,7 +656,7 @@ export function WorkforceTracking() {
                     outerRadius={75}
                     paddingAngle={3}
                     cursor="pointer"
-                    onClick={(d) => openSlideOver('drill_workforce', { vendor: d?.name } as never)}
+                    onClick={(d) => handleVendorDrill(d)}
                   >
                     {vendors.map((_, idx) => (
                       <Cell key={`vendor-cell-${idx}`} fill={ROLE_COLORS[idx % ROLE_COLORS.length]} />
@@ -662,8 +672,8 @@ export function WorkforceTracking() {
                   <YAxis type="category" dataKey="name" fontSize={10} stroke="var(--text-muted)" width={85} tickFormatter={(val) => (val?.length > 12 ? `${val.substring(0, 11)}…` : val)} />
                   <Tooltip content={<WorkforceChartTooltip />} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Bar dataKey="present" name="Present" fill="#10B981" radius={[0, 3, 3, 0]} barSize={12} />
-                  <Bar dataKey="absent" name="Absent" fill="#EF4444" radius={[0, 3, 3, 0]} barSize={12} />
+                  <Bar dataKey="present" name="Present" fill="#10B981" radius={[0, 3, 3, 0]} barSize={12} cursor="pointer" onClick={(d) => handleVendorDrill(d)} />
+                  <Bar dataKey="absent" name="Absent" fill="#EF4444" radius={[0, 3, 3, 0]} barSize={12} cursor="pointer" onClick={(d) => handleVendorDrill(d)} />
                 </BarChart>
               </ResponsiveContainer>
             ) : vendorChartType === 'Vertical Bar' ? (
@@ -674,8 +684,8 @@ export function WorkforceTracking() {
                   <YAxis fontSize={10} stroke="var(--text-muted)" allowDecimals={false} />
                   <Tooltip content={<WorkforceChartTooltip />} />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Bar dataKey="present" name="Present" fill="#10B981" radius={[3, 3, 0, 0]} barSize={14} />
-                  <Bar dataKey="absent" name="Absent" fill="#EF4444" radius={[3, 3, 0, 0]} barSize={14} />
+                  <Bar dataKey="present" name="Present" fill="#10B981" radius={[3, 3, 0, 0]} barSize={14} cursor="pointer" onClick={(d) => handleVendorDrill(d)} />
+                  <Bar dataKey="absent" name="Absent" fill="#EF4444" radius={[3, 3, 0, 0]} barSize={14} cursor="pointer" onClick={(d) => handleVendorDrill(d)} />
                 </BarChart>
               </ResponsiveContainer>
             ) : vendorChartType === 'Line' ? (
@@ -1183,7 +1193,7 @@ export function WorkforceTracking() {
                     outerRadius={75}
                     paddingAngle={roleChartType === 'Donut' ? 3 : 1}
                     cursor="pointer"
-                    onClick={(d) => openSlideOver('drill_workforce', { work_type: d?.type } as never)}
+                    onClick={(d) => handleRoleDrill(d)}
                   >
                     {displayedWorkTypes.map((entry, index) => (
                       <Cell key={`cell-role-${index}`} fill={entry.color} />
@@ -1204,7 +1214,7 @@ export function WorkforceTracking() {
                     radius={[0, 4, 4, 0]}
                     barSize={18}
                     cursor="pointer"
-                    onClick={(d) => openSlideOver('drill_workforce', { work_type: d?.type } as never)}
+                    onClick={(d) => handleRoleDrill(d)}
                   >
                     {displayedWorkTypes.map((entry, index) => (
                       <Cell key={`cell-role-hbar-${index}`} fill={entry.color} />
@@ -1225,7 +1235,7 @@ export function WorkforceTracking() {
                     radius={[4, 4, 0, 0]}
                     barSize={20}
                     cursor="pointer"
-                    onClick={(d) => openSlideOver('drill_workforce', { work_type: d?.type } as never)}
+                    onClick={(d) => handleRoleDrill(d)}
                   >
                     {displayedWorkTypes.map((entry, index) => (
                       <Cell key={`cell-role-vbar-${index}`} fill={entry.color} />
@@ -1258,7 +1268,12 @@ export function WorkforceTracking() {
           }}
         >
           <span>Showing {roleTopN === 'All' ? rawWorkTypes.length : roleTopN} of {rawWorkTypes.length} Roles</span>
-          <span style={{ color: '#00E676', fontWeight: 700 }}>Click to inspect role</span>
+          <span
+            onClick={() => openSlideOver('drill_workforce', {} as never)}
+            style={{ color: '#00E676', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Click to inspect role →
+          </span>
         </div>
       </div>
     </div>
