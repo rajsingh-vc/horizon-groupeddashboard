@@ -120,12 +120,21 @@ export function PPMSoftServices() {
   }, [mode, ppmData, softServicesData]);
 
   const rawPlannedVsAchieved = useMemo(() => {
+    if (mode === 'soft_services') {
+      return [
+        {
+          category: 'DAILY CHECK SHEET - DG SET',
+          planned: softServicesData?.total ?? 60,
+          achieved: softServicesData?.completed ?? 0,
+        },
+      ];
+    }
     return (ppmData?.by_category ?? []).map((item) => ({
       category: item.category,
       planned: Number(item.total || 0),
       achieved: Number(item.completed || 0),
     }));
-  }, [ppmData]);
+  }, [mode, ppmData, softServicesData]);
 
   const displayedPlannedVsAchieved = useMemo(() => {
     if (topN === 'Top 5') return rawPlannedVsAchieved.slice(0, 5);
@@ -134,12 +143,22 @@ export function PPMSoftServices() {
   }, [rawPlannedVsAchieved, topN]);
 
   const categoryComplianceList = useMemo(() => {
-    let items = (ppmData?.by_category ?? []).map((cat) => ({
-      name: cat.category,
-      completed: Number(cat.completed || 0),
-      total: Number(cat.total || 0),
-      percentage: Number(cat.completion_percentage || 0),
-    }));
+    let items =
+      mode === 'soft_services'
+        ? [
+            {
+              name: 'DAILY CHECK SHEET - DG SET',
+              completed: Number(softServicesData?.completed ?? 0),
+              total: Number(softServicesData?.total ?? 60),
+              percentage: Number(softServicesData?.completion_percentage ?? 0),
+            },
+          ]
+        : (ppmData?.by_category ?? []).map((cat) => ({
+            name: cat.category,
+            completed: Number(cat.completed || 0),
+            total: Number(cat.total || 0),
+            percentage: Number(cat.completion_percentage || 0),
+          }));
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -370,7 +389,7 @@ export function PPMSoftServices() {
       >
         {/* Compliance Rate */}
         <div
-          onClick={() => openSlideOver('kpi_ppm')}
+          onClick={() => openSlideOver(mode === 'soft_services' ? 'drill_soft_services' : 'drill_ppm')}
           className="glass-card glass-card-lift"
           style={{
             padding: '16px 20px',
@@ -398,7 +417,7 @@ export function PPMSoftServices() {
 
         {/* Completed */}
         <div
-          onClick={() => openSlideOver('drill_ppm', { status: 'completed' } as never)}
+          onClick={() => openSlideOver(mode === 'soft_services' ? 'drill_soft_services' : 'drill_ppm', { status: 'completed' } as never)}
           className="glass-card glass-card-lift"
           style={{
             padding: '16px 20px',
@@ -422,7 +441,7 @@ export function PPMSoftServices() {
 
         {/* Pending */}
         <div
-          onClick={() => openSlideOver('drill_ppm', { status: 'pending' } as never)}
+          onClick={() => openSlideOver(mode === 'soft_services' ? 'drill_soft_services' : 'drill_ppm', { status: 'pending' } as never)}
           className="glass-card glass-card-lift"
           style={{
             padding: '16px 20px',
@@ -446,7 +465,7 @@ export function PPMSoftServices() {
 
         {/* Overdue */}
         <div
-          onClick={() => openSlideOver('drill_ppm', { status: 'overdue' } as never)}
+          onClick={() => openSlideOver(mode === 'soft_services' ? 'drill_soft_services' : 'drill_ppm', { status: 'overdue' } as never)}
           className="glass-card glass-card-lift"
           style={{
             padding: '16px 20px',
@@ -934,7 +953,7 @@ export function PPMSoftServices() {
                   return (
                     <div
                       key={item.name || idx}
-                      onClick={() => openSlideOver('drill_ppm', { category: item.name } as never)}
+                      onClick={() => openSlideOver(mode === 'soft_services' ? 'drill_soft_services' : 'drill_ppm', { category: item.name } as never)}
                       style={{
                         padding: '8px 12px',
                         borderRadius: '8px',

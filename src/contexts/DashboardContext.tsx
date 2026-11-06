@@ -22,7 +22,7 @@ export interface FilterState {
 export type SlideOverType =
   | 'site' | 'ticket' | 'asset' | 'vendor' | 'ppm' | 'workforce' | 'visitor' | 'compliance' | 'alert'
   | 'kpi_ticket_sla' | 'kpi_ppm' | 'kpi_asset' | 'kpi_workforce' | 'kpi_vendor_sla' | 'kpi_visitors' | 'kpi_avg_resolution'
-  | 'drill_asset' | 'drill_workforce' | 'drill_site' | 'drill_ppm' | 'drill_visitors' | 'drill_ticket'
+  | 'drill_asset' | 'drill_workforce' | 'drill_site' | 'drill_ppm' | 'drill_soft_services' | 'drill_visitors' | 'drill_ticket'
   | null;
 
 interface SlideOverState {

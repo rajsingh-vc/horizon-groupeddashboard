@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { exportToCSV } from '@/utils/exportData';
+import { exportToCSV, exportToXLSX } from '@/utils/exportData';
 import {
   Download, RefreshCw, ChevronRight, ChevronDown, TrendingUp, TrendingDown, Minus,
   AlertTriangle, CheckCircle2, Clock, Users, Wrench, ClipboardCheck,
@@ -149,17 +149,31 @@ export function TicketSLAPanel() {
 
   const handleExport = () => {
     if (!data) return;
-    exportToCSV(
-      data.priority_tickets.map(t => ({
-        ticket_number: t.ticket_number,
-        heading: t.heading,
-        priority: t.priority,
-        sla_status: t.sla_status,
-        status: t.status,
-        created_at: t.created_at,
-      })),
-      'ticket_sla_health'
-    );
+    const tickets = data.priority_tickets.map((t, idx) => ({
+      'S.No': idx + 1,
+      'Ticket Number': t.ticket_number,
+      'Issue Description': t.heading,
+      'Category': t.category || 'General',
+      'Priority': t.priority,
+      'SLA Status': t.sla_status,
+      'Resolution Status': t.status,
+      'Created Timestamp': t.created_at,
+    }));
+    exportToXLSX({
+      summary: {
+        'Report Name': 'Service Desk SLA Health Telemetry',
+        'Total Requests': data.summary.total,
+        'Within SLA': data.sla_status.within_sla,
+        'At Risk': data.sla_status.at_risk,
+        'Breached': data.sla_status.breached,
+        'SLA Percentage': `${data.sla_status.sla_percentage}%`,
+        'Open Requests': data.summary.open,
+        'Resolved Requests': data.summary.resolved,
+        'Exported At': new Date().toLocaleString(),
+      },
+      sheets: [{ name: 'Service Requests', data: tickets }],
+      filename: 'service_requests_sla_health',
+    });
   };
 
   const statusData = useMemo(() => {
@@ -564,17 +578,28 @@ export function AssetHealthPanel() {
 
   const handleExport = () => {
     if (!data) return;
-    exportToCSV(
-      data.critical_assets.map(a => ({
-        id: a.id,
-        name: a.name,
-        asset_number: a.asset_number,
-        location: a.location,
-        category: a.category,
-        breakdown: a.breakdown,
-      })),
-      'asset_health'
-    );
+    const criticalRows = (data.critical_assets || []).map((a, idx) => ({
+      'S.No': idx + 1,
+      'Asset ID': a.id,
+      'Asset Name': a.name,
+      'Asset Number': a.asset_number || `AST-${a.id}`,
+      'Location': a.location,
+      'Category': a.category,
+      'Condition': a.breakdown ? 'Breakdown' : 'Operational',
+    }));
+    exportToXLSX({
+      summary: {
+        'Report Name': 'Asset Health Telemetry',
+        'Total Assets': data.summary.total,
+        'Operational Units': data.summary.operational,
+        'Breakdown Units': data.summary.maintenance,
+        'Critical Units': data.summary.critical,
+        'Health Rate': `${data.summary.health_percentage}%`,
+        'Exported At': new Date().toLocaleString(),
+      },
+      sheets: [{ name: 'Critical Assets', data: criticalRows }],
+      filename: 'asset_health_telemetry',
+    });
   };
 
   const statusData = useMemo(() => {

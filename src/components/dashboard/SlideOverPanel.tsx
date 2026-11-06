@@ -114,7 +114,7 @@ function SiteDetailPanel({ site }: { site: Site }) {
             <span className="font-semibold">{siteAssets.filter(a => a.status === 'operational').length}</span>
           </div>
           <div className="flex items-center justify-between p-2 bg-warning-bg rounded-md">
-            <span>Maintenance</span>
+            <span>Breakdown</span>
             <span className="font-semibold">{siteAssets.filter(a => a.status === 'maintenance').length}</span>
           </div>
           <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
@@ -276,7 +276,7 @@ function AssetDetailPanel({ asset }: { asset: Asset }) {
             asset.status === 'maintenance' && 'status-warning',
             (asset.status === 'critical' || asset.status === 'offline') && 'status-critical',
           )}>
-            {asset.status}
+            {asset.status === 'maintenance' ? 'Breakdown' : asset.status}
           </Badge>
         </div>
       </div>
@@ -421,7 +421,8 @@ const KPI_TITLES: Record<string, string> = {
   drill_asset: 'Asset Portfolio & Health',
   drill_workforce: 'Workforce Tracking',
   drill_site: 'Site Performance at a Glance',
-  drill_ppm: 'Planned Preventive Maintenance & Soft Services',
+  drill_ppm: 'PPM Compliance & Checklist Telemetry',
+  drill_soft_services: 'Soft Services Operations & Daily Audit',
   drill_ticket: 'Service Desk & SLA Intelligence',
   drill_visitors: 'Visitor Details',
 };
@@ -438,6 +439,7 @@ const KPI_PANEL_COMPONENTS: Record<string, React.ComponentType> = {
   drill_workforce: WorkforceDrillPanel,
   drill_site: SiteDrillPanel,
   drill_ppm: PPMDrillPanel,
+  drill_soft_services: PPMDrillPanel,
   drill_ticket: TicketDrillPanel,
   drill_visitors: VisitorDrillPanel,
 };
@@ -455,7 +457,10 @@ export function SlideOverPanel() {
     slideOver.type === 'kpi_asset' ||
     slideOver.type === 'kpi_workforce';
 
-  const panelWidth = isWidePanel
+  const isPpmPanel = slideOver.type === 'kpi_ppm' || slideOver.type === 'drill_ppm' || slideOver.type === 'drill_soft_services';
+  const panelWidth = isPpmPanel
+    ? 'w-full sm:w-[960px] lg:w-[1040px] sm:max-w-[96vw]'
+    : isWidePanel
     ? 'w-full sm:w-[760px] sm:max-w-[95vw]'
     : 'w-full sm:w-[540px] sm:max-w-[95vw]';
 

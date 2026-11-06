@@ -5,19 +5,17 @@ export function exportToCSV(data: Record<string, unknown>[], filename: string) {
 
   const headers = Object.keys(data[0]);
   const csvRows = [
-    headers.join(','),
+    headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(','),
     ...data.map(row =>
       headers.map(h => {
         const val = row[h];
         const str = val == null ? '' : String(val);
-        return str.includes(',') || str.includes('"') || str.includes('\n')
-          ? `"${str.replace(/"/g, '""')}"`
-          : str;
+        return `"${str.replace(/"/g, '""')}"`;
       }).join(',')
     ),
   ];
 
-  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -51,7 +49,7 @@ export function exportToJSON(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/** Export full drill/panel data as XLSX with multiple sheets: summary, blocks, tickets, assets, ppm, workforce, vendors, graph_data */
+/** Export full drill/panel data as XLSX with multiple sheets: summary, formatted data sheets with column widths */
 export function exportToXLSX(payload: {
   summary: Record<string, unknown>;
   sheets: { name: string; data: Record<string, unknown>[] }[];
@@ -61,13 +59,29 @@ export function exportToXLSX(payload: {
   const wb = XLSX.utils.book_new();
   const base = `${filename}_${new Date().toISOString().slice(0, 10)}`;
 
-  const summaryData = [['Metric', 'Value'], ...Object.entries(summary).map(([k, v]) => [k, v])];
+  // Summary sheet with clean formatting
+  const summaryData = [
+    ['Executive Metric / Parameter', 'Report Value'],
+    ...Object.entries(summary).map(([k, v]) => [k, v == null ? '—' : String(v)])
+  ];
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  wsSummary['!cols'] = [{ wch: 32 }, { wch: 42 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
 
+  // Individual data sheets with auto-calculated column widths
   sheets.forEach(({ name, data }) => {
     if (data.length > 0) {
       const ws = XLSX.utils.json_to_sheet(data);
+      const keys = Object.keys(data[0]);
+      const cols = keys.map((k) => {
+        let maxLen = k.length;
+        for (let i = 0; i < Math.min(data.length, 120); i++) {
+          const valStr = data[i][k] != null ? String(data[i][k]) : '';
+          if (valStr.length > maxLen) maxLen = valStr.length;
+        }
+        return { wch: Math.min(Math.max(maxLen + 4, 12), 48) };
+      });
+      ws['!cols'] = cols;
       XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31));
     }
   });

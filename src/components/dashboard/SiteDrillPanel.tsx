@@ -613,7 +613,7 @@ export function SiteDrillPanel() {
               active={assetFilter === 'operational'}
             />
             <StatCard
-              label="Maintenance"
+              label="Breakdown"
               value={data.assets.summary.maintenance}
               color="text-warning"
               onClick={() => handleAssetFilterChange(assetFilter === 'maintenance' ? 'all' : 'maintenance')}
@@ -636,7 +636,7 @@ export function SiteDrillPanel() {
 
           {assetFilter !== 'all' && (
             <FilterHeader
-              label={`${assetFilter.charAt(0).toUpperCase() + assetFilter.slice(1)} Assets`}
+              label={`${assetFilter === 'maintenance' ? 'Breakdown' : (assetFilter.charAt(0).toUpperCase() + assetFilter.slice(1))} Assets`}
               onClear={() => handleAssetFilterChange('all')}
             />
           )}
@@ -647,7 +647,7 @@ export function SiteDrillPanel() {
               <div className="grid grid-cols-2 gap-2 p-3 bg-muted/30 rounded-lg">
                 <div className="text-center">
                   <div className="text-xl font-bold">{assetDrillData?.total ?? data.assets.breakdown.find(b => b.status === assetFilter)?.count ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">Total {assetFilter}</div>
+                  <div className="text-xs text-muted-foreground">Total {assetFilter === 'maintenance' ? 'Breakdown' : assetFilter}</div>
                 </div>
                 <div className="text-center">
                   <div className={cn('text-xl font-bold',
@@ -655,7 +655,7 @@ export function SiteDrillPanel() {
                       assetFilter === 'maintenance' ? 'text-warning' :
                         assetFilter === 'critical' ? 'text-critical' : 'text-muted-foreground'
                   )}>
-                    {assetFilter.charAt(0).toUpperCase() + assetFilter.slice(1)}
+                    {assetFilter === 'maintenance' ? 'Breakdown' : (assetFilter.charAt(0).toUpperCase() + assetFilter.slice(1))}
                   </div>
                   <div className="text-xs text-muted-foreground">Status</div>
                 </div>
