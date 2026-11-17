@@ -190,11 +190,6 @@ export function ExecutiveKPIStrip() {
     return rounded === 0;
   };
 
-  const hiddenZeroCount = useMemo(
-    () => kpiCards.filter(isZeroCard).length,
-    [kpiCards]
-  );
-
   // Hide cards showing 0 by default; reveal matching cards when searching
   const filteredCards = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -311,8 +306,8 @@ export function ExecutiveKPIStrip() {
         }}
       >
         {/* Search input */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, maxWidth: '640px', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: '1 1 260px', maxWidth: '420px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, maxWidth: '420px' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
             <Search
               size={15}
               style={{
@@ -361,18 +356,6 @@ export function ExecutiveKPIStrip() {
               </button>
             )}
           </div>
-          {!searchQuery.trim() && hiddenZeroCount > 0 && (
-            <span
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                color: 'var(--text-muted)',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {hiddenZeroCount} zero {hiddenZeroCount === 1 ? 'card' : 'cards'} hidden — search to show
-            </span>
-          )}
         </div>
 
         {/* Compare vs Period / vs Target Switcher */}

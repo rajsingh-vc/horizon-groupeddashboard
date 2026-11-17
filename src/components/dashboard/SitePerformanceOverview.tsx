@@ -9,6 +9,7 @@ import {
   Search,
   ExternalLink,
   SlidersHorizontal,
+  EyeOff,
   BarChart2,
   Table as TableIcon,
   Flame,
@@ -64,6 +65,50 @@ const SITE_PALETTE = [
   '#0EA5E9', '#D946EF', '#84CC16', '#F43F5E', '#64748B', '#FB923C',
 ];
 
+interface TableColumnDef {
+  id: string;
+  label: string;
+  checkZero?: (sites: any[]) => boolean;
+}
+
+const TABLE_COLUMNS: TableColumnDef[] = [
+  { id: 'rank', label: 'Rank' },
+  { id: 'name', label: 'Site / Park Name' },
+  { id: 'group', label: 'Region / Group' },
+  {
+    id: 'health',
+    label: 'Overall Health',
+    checkZero: (sites) => sites.length > 0 && sites.every((s) => Number(s.health || 0) === 0),
+  },
+  {
+    id: 'tat',
+    label: 'SLA Adherence',
+    checkZero: (sites) => sites.length > 0 && sites.every((s) => Number(s.tat || 0) === 0),
+  },
+  {
+    id: 'ppm',
+    label: 'PPM Adherence',
+    checkZero: (sites) => sites.length > 0 && sites.every((s) => Number(s.ppm || 0) === 0),
+  },
+  {
+    id: 'workforce',
+    label: 'Workforce Attendance',
+    checkZero: (sites) => sites.length > 0 && sites.every((s) => Number(s.workforce || 0) === 0),
+  },
+  {
+    id: 'assets',
+    label: 'Active Assets',
+    checkZero: (sites) => sites.length > 0 && sites.every((s) => Number(s.assets || 0) === 0),
+  },
+  {
+    id: 'tickets',
+    label: 'Tickets (Open/Closed)',
+    checkZero: (sites) => sites.length > 0 && sites.every((s) => Number(s.tickets || 0) === 0 && Number(s.closed || 0) === 0),
+  },
+  { id: 'status', label: 'Status' },
+  { id: 'action', label: 'Action' },
+];
+
 export function SitePerformanceOverview() {
   const { filters, openSlideOver } = useDashboard();
   const { data: rawSiteData, isPending } = useSitePerformance(filters);
@@ -73,10 +118,28 @@ export function SitePerformanceOverview() {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [chartType, setChartType] = useState<ChartType>('Horizontal Bar');
   const [topN, setTopN] = useState<'Top 5' | 'Top 10' | 'All'>('All');
-  const [sortField, setSortField] = useState<'name' | 'health' | 'tat' | 'ppm' | 'assets'>('health');
+  const [sortField, setSortField] = useState<'name' | 'health' | 'tat' | 'ppm' | 'workforce' | 'assets'>('health');
   const [sortAsc, setSortAsc] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState<number>(5);
+  const [userToggledColumns, setUserToggledColumns] = useState<Record<string, boolean>>({});
+  const [isHideColOpen, setIsHideColOpen] = useState(false);
+  const hideColRef = useRef<HTMLDivElement>(null);
+
+  // Close Hide Column dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (hideColRef.current && !hideColRef.current.contains(e.target as Node)) {
+        setIsHideColOpen(false);
+      }
+    };
+    if (isHideColOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isHideColOpen]);
 
   // Normalize site data
   const sites = useMemo(() => {
@@ -110,6 +173,29 @@ export function SitePerformanceOverview() {
       };
     });
   }, [rawSiteData]);
+
+  // Determine if a column is currently hidden (user toggle overrides default; default hides all-zero columns)
+  const isColumnHidden = (colId: string) => {
+    if (userToggledColumns[colId] !== undefined) {
+      return userToggledColumns[colId];
+    }
+    const colDef = TABLE_COLUMNS.find((c) => c.id === colId);
+    if (colDef?.checkZero) {
+      return colDef.checkZero(sites);
+    }
+    return false;
+  };
+
+  const handleToggleColumn = (colId: string, shouldHide: boolean) => {
+    setUserToggledColumns((prev) => ({
+      ...prev,
+      [colId]: shouldHide,
+    }));
+  };
+
+  const hiddenCount = useMemo(() => {
+    return TABLE_COLUMNS.filter((col) => isColumnHidden(col.id)).length;
+  }, [sites, userToggledColumns]);
 
   // Filtered & sorted sites
   const filteredSites = useMemo(() => {
@@ -406,6 +492,200 @@ export function SitePerformanceOverview() {
                   </button>
                 );
               })}
+
+              {/* Hide Column Dropdown (Placed immediately after Workforce Attendance) */}
+              <div ref={hideColRef} style={{ position: 'relative', display: 'inline-block' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsHideColOpen((prev) => !prev)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '4px 10px',
+                    fontSize: '0.6875rem',
+                    fontWeight: isHideColOpen || hiddenCount > 0 ? 700 : 500,
+                    borderRadius: '6px',
+                    border: isHideColOpen
+                      ? '1px solid #00C853'
+                      : hiddenCount > 0
+                      ? '1px solid rgba(0, 200, 83, 0.4)'
+                      : '1px solid var(--glass-border)',
+                    backgroundColor: isHideColOpen
+                      ? 'rgba(0, 200, 83, 0.15)'
+                      : hiddenCount > 0
+                      ? 'rgba(0, 200, 83, 0.08)'
+                      : 'transparent',
+                    color: isHideColOpen || hiddenCount > 0 ? '#00E676' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="Hide or show table columns (Ticked = Hidden)"
+                >
+                  <EyeOff size={12} />
+                  <span>Hide Column</span>
+                  {hiddenCount > 0 && (
+                    <span
+                      style={{
+                        padding: '1px 5px',
+                        borderRadius: '999px',
+                        backgroundColor: '#00C853',
+                        color: '#0B0F19',
+                        fontSize: '0.625rem',
+                        fontWeight: 800,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {hiddenCount}
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={11}
+                    style={{
+                      transform: isHideColOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.15s ease',
+                    }}
+                  />
+                </button>
+
+                {isHideColOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 6px)',
+                      right: 0,
+                      width: '260px',
+                      maxHeight: '380px',
+                      overflowY: 'auto',
+                      backgroundColor: 'var(--card, #ffffff)',
+                      border: '1px solid var(--glass-border)',
+                      borderRadius: '10px',
+                      padding: '10px',
+                      boxShadow: '0 12px 30px -4px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15)',
+                      zIndex: 70,
+                      backdropFilter: 'blur(12px)',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '8px',
+                        paddingBottom: '6px',
+                        borderBottom: '1px solid var(--glass-border)',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                          Hide Columns
+                        </div>
+                        <div style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
+                          Tick to hide · Untick to show
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const showAll: Record<string, boolean> = {};
+                            TABLE_COLUMNS.forEach((c) => {
+                              showAll[c.id] = false;
+                            });
+                            setUserToggledColumns(showAll);
+                          }}
+                          style={{
+                            fontSize: '0.625rem',
+                            fontWeight: 600,
+                            color: '#00C853',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 4px',
+                          }}
+                        >
+                          Show All
+                        </button>
+                        <span style={{ color: 'var(--border-color)', fontSize: '0.625rem' }}>·</span>
+                        <button
+                          type="button"
+                          onClick={() => setUserToggledColumns({})}
+                          style={{
+                            fontSize: '0.625rem',
+                            fontWeight: 600,
+                            color: 'var(--text-muted)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 4px',
+                          }}
+                          title="Restore default hiding (all-zero columns hidden)"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      {TABLE_COLUMNS.map((col) => {
+                        const isZero = col.checkZero ? col.checkZero(sites) : false;
+                        const hidden = isColumnHidden(col.id);
+
+                        return (
+                          <label
+                            key={col.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '5px 8px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              color: hidden ? 'var(--text-muted)' : 'var(--text-main)',
+                              backgroundColor: hidden ? 'rgba(239, 68, 68, 0.05)' : 'transparent',
+                              transition: 'background-color 0.12s ease',
+                            }}
+                            className="hover:bg-muted/40"
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <input
+                                type="checkbox"
+                                checked={hidden}
+                                onChange={(e) => handleToggleColumn(col.id, e.target.checked)}
+                                style={{
+                                  cursor: 'pointer',
+                                  accentColor: '#00C853',
+                                  width: '13px',
+                                  height: '13px',
+                                }}
+                              />
+                              <span style={{ fontWeight: hidden ? 500 : 600 }}>{col.label}</span>
+                            </div>
+                            {isZero && (
+                              <span
+                                style={{
+                                  fontSize: '0.5625rem',
+                                  fontWeight: 700,
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                                  color: '#EF4444',
+                                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                                }}
+                                title="All sites currently have 0 for this metric — hidden by default"
+                              >
+                                All 0%
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -841,56 +1121,87 @@ export function SitePerformanceOverview() {
                     letterSpacing: '0.04em',
                   }}
                 >
-                  <th style={{ padding: '10px 12px', width: '60px' }}>Rank</th>
-                  <th
-                    style={{ padding: '10px 12px', cursor: 'pointer' }}
-                    onClick={() => handleSort('name')}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>Site / Park Name</span>
-                      {sortField === 'name' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-                    </div>
-                  </th>
-                  <th style={{ padding: '10px 12px' }}>Region / Group</th>
-                  <th
-                    style={{ padding: '10px 12px', cursor: 'pointer' }}
-                    onClick={() => handleSort('health')}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>Overall Health</span>
-                      {sortField === 'health' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-                    </div>
-                  </th>
-                  <th
-                    style={{ padding: '10px 12px', cursor: 'pointer' }}
-                    onClick={() => handleSort('tat')}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>SLA Adherence</span>
-                      {sortField === 'tat' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-                    </div>
-                  </th>
-                  <th
-                    style={{ padding: '10px 12px', cursor: 'pointer' }}
-                    onClick={() => handleSort('ppm')}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>PPM Adherence</span>
-                      {sortField === 'ppm' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-                    </div>
-                  </th>
-                  <th
-                    style={{ padding: '10px 12px', cursor: 'pointer' }}
-                    onClick={() => handleSort('assets')}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>Active Assets</span>
-                      {sortField === 'assets' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-                    </div>
-                  </th>
-                  <th style={{ padding: '10px 12px' }}>Tickets (Open/Closed)</th>
-                  <th style={{ padding: '10px 12px' }}>Status</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Action</th>
+                  {!isColumnHidden('rank') && (
+                    <th style={{ padding: '10px 12px', width: '60px' }}>Rank</th>
+                  )}
+                  {!isColumnHidden('name') && (
+                    <th
+                      style={{ padding: '10px 12px', cursor: 'pointer' }}
+                      onClick={() => handleSort('name')}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>Site / Park Name</span>
+                        {sortField === 'name' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                    </th>
+                  )}
+                  {!isColumnHidden('group') && (
+                    <th style={{ padding: '10px 12px' }}>Region / Group</th>
+                  )}
+                  {!isColumnHidden('health') && (
+                    <th
+                      style={{ padding: '10px 12px', cursor: 'pointer' }}
+                      onClick={() => handleSort('health')}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>Overall Health</span>
+                        {sortField === 'health' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                    </th>
+                  )}
+                  {!isColumnHidden('tat') && (
+                    <th
+                      style={{ padding: '10px 12px', cursor: 'pointer' }}
+                      onClick={() => handleSort('tat')}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>SLA Adherence</span>
+                        {sortField === 'tat' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                    </th>
+                  )}
+                  {!isColumnHidden('ppm') && (
+                    <th
+                      style={{ padding: '10px 12px', cursor: 'pointer' }}
+                      onClick={() => handleSort('ppm')}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>PPM Adherence</span>
+                        {sortField === 'ppm' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                    </th>
+                  )}
+                  {!isColumnHidden('workforce') && (
+                    <th
+                      style={{ padding: '10px 12px', cursor: 'pointer' }}
+                      onClick={() => handleSort('workforce')}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>Workforce Attendance</span>
+                        {sortField === 'workforce' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                    </th>
+                  )}
+                  {!isColumnHidden('assets') && (
+                    <th
+                      style={{ padding: '10px 12px', cursor: 'pointer' }}
+                      onClick={() => handleSort('assets')}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>Active Assets</span>
+                        {sortField === 'assets' && (sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                    </th>
+                  )}
+                  {!isColumnHidden('tickets') && (
+                    <th style={{ padding: '10px 12px' }}>Tickets (Open/Closed)</th>
+                  )}
+                  {!isColumnHidden('status') && (
+                    <th style={{ padding: '10px 12px' }}>Status</th>
+                  )}
+                  {!isColumnHidden('action') && (
+                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>Action</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -910,142 +1221,179 @@ export function SitePerformanceOverview() {
                         transition: 'background-color 0.15s ease',
                       }}
                     >
-                      <td style={{ padding: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>
-                        #{rank}
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                          {site.name}
-                        </div>
-                      </td>
-                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>
-                        {site.group}
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            style={{
-                              fontWeight: 800,
-                              fontFamily: 'monospace',
-                              color: isHealthy ? '#00C853' : isWarning ? '#FF9100' : '#EF4444',
-                              minWidth: '42px',
-                            }}
-                          >
-                            {site.health}%
-                          </span>
-                          <div
-                            style={{
-                              width: '60px',
-                              height: '6px',
-                              borderRadius: '999px',
-                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                              overflow: 'hidden',
-                            }}
-                          >
+                      {!isColumnHidden('rank') && (
+                        <td style={{ padding: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>
+                          #{rank}
+                        </td>
+                      )}
+                      {!isColumnHidden('name') && (
+                        <td style={{ padding: '12px' }}>
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                            {site.name}
+                          </div>
+                        </td>
+                      )}
+                      {!isColumnHidden('group') && (
+                        <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>
+                          {site.group}
+                        </td>
+                      )}
+                      {!isColumnHidden('health') && (
+                        <td style={{ padding: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
+                              style={{
+                                fontWeight: 800,
+                                fontFamily: 'monospace',
+                                color: isHealthy ? '#00C853' : isWarning ? '#FF9100' : '#EF4444',
+                                minWidth: '42px',
+                              }}
+                            >
+                              {site.health}%
+                            </span>
                             <div
                               style={{
-                                width: `${Math.min(100, site.health)}%`,
-                                height: '100%',
-                                backgroundColor: isHealthy ? '#00C853' : isWarning ? '#FF9100' : '#EF4444',
+                                width: '60px',
+                                height: '6px',
                                 borderRadius: '999px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: `${Math.min(100, site.health)}%`,
+                                  height: '100%',
+                                  backgroundColor: isHealthy ? '#00C853' : isWarning ? '#FF9100' : '#EF4444',
+                                  borderRadius: '999px',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      )}
+                      {!isColumnHidden('tat') && (
+                        <td style={{ padding: '12px' }}>
+                          <span
+                            style={{
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              backgroundColor: site.tat >= 95 ? 'rgba(0, 200, 83, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              color: site.tat >= 95 ? '#00E676' : '#EF4444',
+                              border: `1px solid ${site.tat >= 95 ? 'rgba(0, 200, 83, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                            }}
+                          >
+                            {site.tat}%
+                          </span>
+                        </td>
+                      )}
+                      {!isColumnHidden('ppm') && (
+                        <td style={{ padding: '12px' }}>
+                          <span
+                            style={{
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              backgroundColor: site.ppm >= 90 ? 'rgba(0, 200, 83, 0.15)' : 'rgba(255, 145, 0, 0.15)',
+                              color: site.ppm >= 90 ? '#00E676' : '#FF9100',
+                              border: `1px solid ${site.ppm >= 90 ? 'rgba(0, 200, 83, 0.3)' : 'rgba(255, 145, 0, 0.3)'}`,
+                            }}
+                          >
+                            {site.ppm}%
+                          </span>
+                        </td>
+                      )}
+                      {!isColumnHidden('workforce') && (
+                        <td style={{ padding: '12px' }}>
+                          <span
+                            style={{
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              backgroundColor: site.workforce >= 85 ? 'rgba(0, 200, 83, 0.15)' : 'rgba(255, 145, 0, 0.15)',
+                              color: site.workforce >= 85 ? '#00E676' : '#FF9100',
+                              border: `1px solid ${site.workforce >= 85 ? 'rgba(0, 200, 83, 0.3)' : 'rgba(255, 145, 0, 0.3)'}`,
+                            }}
+                          >
+                            {site.workforce}%
+                          </span>
+                        </td>
+                      )}
+                      {!isColumnHidden('assets') && (
+                        <td style={{ padding: '12px', fontWeight: 600 }}>
+                          {site.assets.toLocaleString()}
+                        </td>
+                      )}
+                      {!isColumnHidden('tickets') && (
+                        <td style={{ padding: '12px' }}>
+                          <span style={{ color: site.tickets > 0 ? '#FF7A45' : 'var(--text-muted)', fontWeight: 600 }}>
+                            {site.tickets} open
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', margin: '0 4px' }}>/</span>
+                          <span style={{ color: '#00C853', fontWeight: 600 }}>
+                            {site.closed} closed
+                          </span>
+                        </td>
+                      )}
+                      {!isColumnHidden('status') && (
+                        <td style={{ padding: '12px' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '3px 8px',
+                              borderRadius: '999px',
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              backgroundColor: isHealthy ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 91, 34, 0.12)',
+                              color: isHealthy ? '#00E676' : '#FF7A45',
+                              border: `1px solid ${isHealthy ? 'rgba(0, 200, 83, 0.35)' : 'rgba(255, 91, 34, 0.35)'}`,
+                            }}
+                          >
+                            <span
+                              className="pulse-dot"
+                              style={{
+                                width: '5px',
+                                height: '5px',
+                                backgroundColor: isHealthy ? '#00E676' : '#FF5B22',
                               }}
                             />
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <span
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontSize: '0.6875rem',
-                            fontWeight: 700,
-                            backgroundColor: site.tat >= 95 ? 'rgba(0, 200, 83, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                            color: site.tat >= 95 ? '#00E676' : '#EF4444',
-                            border: `1px solid ${site.tat >= 95 ? 'rgba(0, 200, 83, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                          }}
-                        >
-                          {site.tat}%
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <span
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontSize: '0.6875rem',
-                            fontWeight: 700,
-                            backgroundColor: site.ppm >= 90 ? 'rgba(0, 200, 83, 0.15)' : 'rgba(255, 145, 0, 0.15)',
-                            color: site.ppm >= 90 ? '#00E676' : '#FF9100',
-                            border: `1px solid ${site.ppm >= 90 ? 'rgba(0, 200, 83, 0.3)' : 'rgba(255, 145, 0, 0.3)'}`,
-                          }}
-                        >
-                          {site.ppm}%
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px', fontWeight: 600 }}>
-                        {site.assets.toLocaleString()}
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <span style={{ color: site.tickets > 0 ? '#FF7A45' : 'var(--text-muted)', fontWeight: 600 }}>
-                          {site.tickets} open
-                        </span>
-                        <span style={{ color: 'var(--text-muted)', margin: '0 4px' }}>/</span>
-                        <span style={{ color: '#00C853', fontWeight: 600 }}>
-                          {site.closed} closed
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            padding: '3px 8px',
-                            borderRadius: '999px',
-                            fontSize: '0.6875rem',
-                            fontWeight: 700,
-                            backgroundColor: isHealthy ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 91, 34, 0.12)',
-                            color: isHealthy ? '#00E676' : '#FF7A45',
-                            border: `1px solid ${isHealthy ? 'rgba(0, 200, 83, 0.35)' : 'rgba(255, 91, 34, 0.35)'}`,
-                          }}
-                        >
-                          <span
-                            className="pulse-dot"
-                            style={{
-                              width: '5px',
-                              height: '5px',
-                              backgroundColor: isHealthy ? '#00E676' : '#FF5B22',
+                            <span>{site.status}</span>
+                          </span>
+                        </td>
+                      )}
+                      {!isColumnHidden('action') && (
+                        <td style={{ padding: '12px', textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSiteClick(site);
                             }}
-                          />
-                          <span>{site.status}</span>
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px', textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSiteClick(site);
-                          }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            fontSize: '0.6875rem',
-                            fontWeight: 700,
-                            backgroundColor: 'rgba(0, 200, 83, 0.12)',
-                            color: '#00E676',
-                            border: '1px solid rgba(0, 200, 83, 0.3)',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <span>Inspect</span>
-                          <ExternalLink size={11} />
-                        </button>
-                      </td>
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '0.6875rem',
+                              fontWeight: 700,
+                              backgroundColor: 'rgba(0, 200, 83, 0.12)',
+                              color: '#00E676',
+                              border: '1px solid rgba(0, 200, 83, 0.3)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <span>Inspect</span>
+                            <ExternalLink size={11} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -1058,6 +1406,8 @@ export function SitePerformanceOverview() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
                 paddingTop: '16px',
                 marginTop: '8px',
                 borderTop: '1px solid var(--glass-border)',
@@ -1065,9 +1415,52 @@ export function SitePerformanceOverview() {
                 color: 'var(--text-muted)',
               }}
             >
-              <div>
-                Showing {(currentPage - 1) * pageSize + 1} to{' '}
-                {Math.min(currentPage * pageSize, filteredSites.length)} of {filteredSites.length} parks
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div>
+                  Showing {filteredSites.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{' '}
+                  {Math.min(currentPage * pageSize, filteredSites.length)} of {filteredSites.length} parks
+                </div>
+
+                {/* Rows per page selector: multiples of 5 starting from 5 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                    Rows per page:
+                  </span>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '2px',
+                      borderRadius: '6px',
+                      backgroundColor: 'rgba(148, 163, 184, 0.12)',
+                      border: '1px solid var(--glass-border)',
+                    }}
+                  >
+                    {[5, 10, 15, 20, 25].map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => {
+                          setPageSize(size);
+                          setCurrentPage(1);
+                        }}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '0.6875rem',
+                          fontWeight: pageSize === size ? 700 : 500,
+                          borderRadius: '4px',
+                          border: 'none',
+                          backgroundColor: pageSize === size ? '#00C853' : 'transparent',
+                          color: pageSize === size ? '#0B0F19' : 'var(--text-muted)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1080,7 +1473,8 @@ export function SitePerformanceOverview() {
                     borderRadius: '6px',
                     border: '1px solid var(--glass-border)',
                     backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                    color: currentPage <= 1 ? 'var(--text-muted)' : 'var(--text-main)', opacity: currentPage <= 1 ? 0.45 : 1,
+                    color: currentPage <= 1 ? 'var(--text-muted)' : 'var(--text-main)',
+                    opacity: currentPage <= 1 ? 0.45 : 1,
                     cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
                   }}
                 >
@@ -1098,7 +1492,8 @@ export function SitePerformanceOverview() {
                     borderRadius: '6px',
                     border: '1px solid var(--glass-border)',
                     backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                    color: currentPage >= totalPages ? 'var(--text-muted)' : 'var(--text-main)', opacity: currentPage >= totalPages ? 0.45 : 1,
+                    color: currentPage >= totalPages ? 'var(--text-muted)' : 'var(--text-main)',
+                    opacity: currentPage >= totalPages ? 0.45 : 1,
                     cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
                   }}
                 >
